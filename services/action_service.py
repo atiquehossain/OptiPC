@@ -36,6 +36,9 @@ class ActionService:
     def open_privacy_settings(self) -> None:
         self.open_target("ms-settings:privacy")
 
+    def open_location_settings(self) -> None:
+        self.open_target("ms-settings:privacy-location")
+
     def open_sound_panel(self) -> None:
         self.open_target("mmsys.cpl")
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Callable
+
 import customtkinter as ctk
 
 
@@ -14,16 +15,32 @@ class Sidebar(ctk.CTkFrame):
         self._build()
 
     def _build(self) -> None:
-        ctk.CTkLabel(self, text="SmartPC Toolkit", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, padx=24, pady=(28, 10), sticky="w")
-        ctk.CTkLabel(self, text="Windows Utility Dashboard", text_color="gray70", font=ctk.CTkFont(size=13)).grid(row=1, column=0, padx=24, pady=(0, 20), sticky="w")
+        ctk.CTkLabel(self, text="OptiPC", font=ctk.CTkFont(size=24, weight="bold")).grid(
+            row=0, column=0, padx=24, pady=(28, 10), sticky="w"
+        )
+        ctk.CTkLabel(
+            self,
+            text="Windows Utility Dashboard",
+            text_color="gray70",
+            font=ctk.CTkFont(size=13),
+        ).grid(row=1, column=0, padx=24, pady=(0, 20), sticky="w")
 
         names = ["Dashboard", "Cleanup", "Repair", "Recovery", "Devices", "Wallpaper", "Reports", "Settings"]
         for row, name in enumerate(names, start=2):
-            button = ctk.CTkButton(self, text=name, height=42, corner_radius=12, anchor="w", command=lambda n=name: self.on_navigate(n))
+            button = ctk.CTkButton(
+                self,
+                text=name,
+                height=42,
+                corner_radius=12,
+                anchor="w",
+                command=lambda n=name: self.on_navigate(n),
+            )
             button.grid(row=row, column=0, padx=18, pady=6, sticky="ew")
             self.buttons[name] = button
 
-        ctk.CTkLabel(self, text="final build", text_color="gray60", font=ctk.CTkFont(size=12)).grid(row=12, column=0, padx=24, pady=20, sticky="sw")
+        ctk.CTkLabel(self, text="clean structured build", text_color="gray60", font=ctk.CTkFont(size=12)).grid(
+            row=12, column=0, padx=24, pady=20, sticky="sw"
+        )
 
     def set_active(self, page_name: str) -> None:
         for name, button in self.buttons.items():

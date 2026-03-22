@@ -1,29 +1,40 @@
-# SmartPC Toolkit (Final ZIP)
+# OptiPC
 
-A beginner-friendly Windows utility app built with Python + customtkinter.
+OptiPC is a beginner-friendly Windows utility dashboard built with Python and CustomTkinter.
 
-## What this app can do
+## Features
 
-- Quick cleanup of TEMP files
-- Empty Recycle Bin safely
-- Open Windows tools and settings
-- Run repair tools (SFC / DISM / CHKDSK) with admin prompt when needed
-- Recover deleted files using Microsoft's **Windows File Recovery** (`winfr`)
-- Show storage / SSD health information
-- Set an image as desktop wallpaper
-- Generate text reports
-- Show a global status bar and loading animation so users know the app is working
+- Dashboard with quick actions
+- Cleanup page with:
+  - Quick Temp Cleanup
+  - Deep Cleanup
+  - Empty Recycle Bin
+- Repair page for SFC, DISM, and CHKDSK
+- Recovery page for Windows File Recovery
+- Devices page with sound, camera, privacy, and location shortcuts
+- Wallpaper tools
+- Reports page with battery, network, installed apps, heavy process, and storage health reports
+- Floating desktop widgets:
+  - CPU
+  - RAM
+  - GPU
+  - Partitions
+  - Storage
+  - Network Speed
 
-## Important notes
+## What changed in this build
 
-- The app **does not run fully as Administrator**.
-- Only admin-required actions try to elevate.
-- Recovery uses Microsoft's `winfr` tool. Install **Windows File Recovery** from Microsoft Store if you want to use recovery.
-- Storage health information depends on your hardware and Windows drivers. Some fields may show `N/A`.
+- Network Speed widget now uses the same resizable widget base as the other widgets
+- Widgets resize from all edges and corners
+- Deep Cleanup was added back
+- Devices page now includes Location Settings
+- Recovery page no longer uses success/error popups
+- Cleanup now streams live progress into the output box
+- Code structure is cleaner:
+  - `services/cleanup_service.py` handles cleanup logic
+  - `widgets/base_mini_widget.py` handles shared widget behavior
 
-## Install
-
-Open Terminal / Command Prompt in this folder and run:
+## Run the project
 
 ```bat
 python -m venv .venv
@@ -32,41 +43,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## File reading order (best for beginners)
+## Suggested next upgrades
 
-1. `main.py`
-2. `app.py`
-3. `pages/base_page.py`
-4. `services/system_service.py`
-5. `pages/dashboard_page.py`
-6. `pages/cleanup_page.py`
-7. `pages/recovery_page.py`
-8. `services/storage_health_service.py`
-9. `services/wallpaper_service.py`
-
-## Project structure
-
-- `app.py` = main window and page navigation
-- `pages/` = each screen of the app
-- `services/` = logic that talks to Windows
-- `widgets/` = reusable UI components
-- `ui/` = sidebar, top bar, bottom status bar
-
-## Admin behavior
-
-These usually need admin permission:
-- SFC / DISM / CHKDSK
-- some recovery operations
-
-These usually do **not** need admin:
-- cleanup UI
-- wallpaper change
-- reports
-- storage info viewing
-
-## Recovery reminder
-
-For deleted file recovery:
-- stop using the source drive as much as possible
-- save recovered files to a **different drive**
-- SSD recovery is less reliable than HDD recovery if deleted space was already overwritten
+- System tray mode so widgets can stay alive in the background
+- Save widget positions and sizes between launches
+- Add toast notifications
+- Add a dedicated Storage page with device cards

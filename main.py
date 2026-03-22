@@ -1,12 +1,12 @@
-"""Start SmartPC Toolkit.
+"""Start OptiPC.
 
-This app runs in normal user mode by default.
-Only selected actions (like SFC / DISM / CHKDSK) try to run elevated.
+The app runs in normal user mode by default.
+Only selected actions (like SFC / DISM / CHKDSK) ask Windows for Administrator permission.
 """
 
-from app import SmartPCToolkitApp
+from app import OptiPCApp
 
 
 if __name__ == "__main__":
-    app = SmartPCToolkitApp()
+    app = OptiPCApp()
     app.mainloop()
