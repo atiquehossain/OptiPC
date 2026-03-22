@@ -45,7 +45,11 @@ class DashboardPage(BasePage):
 
         self.make_action_button(button_frame, "Partitions Widget", lambda: self._open_widget("toggle_partitions_widget", "Partitions Widget")).grid(row=2, column=0, padx=6, pady=6, sticky="ew")
         self.make_action_button(button_frame, "Storage Widget", lambda: self._open_widget("toggle_storage_widget", "Storage Widget")).grid(row=2, column=1, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "Net Speed Widget", lambda: self._open_widget("toggle_network_speed_widget", "Net Speed Widget")).grid(row=2, column=2, padx=6, pady=6, sticky="ew")
+        self.make_action_button(button_frame, "Calendar Widget", lambda: self._open_widget("toggle_calendar_widget", "Calendar Widget")).grid(row=2, column=2, padx=6, pady=6, sticky="ew")
+
+        self.make_action_button(button_frame, "Net Speed Widget", lambda: self._open_widget("toggle_network_speed_widget", "Net Speed Widget")).grid(row=3, column=0, padx=6, pady=6, sticky="ew")
+        self.make_action_button(button_frame, "Clock Widget", lambda: self._open_widget("toggle_clock_widget", "Clock Widget")).grid(row=3, column=1, padx=6, pady=6, sticky="ew")
+        self.make_action_button(button_frame, "Uptime Widget", lambda: self._open_widget("toggle_uptime_widget", "Uptime Widget")).grid(row=3, column=2, padx=6, pady=6, sticky="ew")
 
         live_card = self.make_card(wrapper, "Live CPU Overview", "Updates automatically while the Dashboard is open")
         live_card.grid(row=1, column=2, columnspan=2, padx=8, pady=8, sticky="nsew")

@@ -29,7 +29,7 @@ from ui.sidebar import Sidebar
 from ui.statusbar import StatusBar
 from ui.topbar import Topbar
 from widgets.network_speed_widget import NetworkSpeedWidget
-from widgets.system_widgets import CPUWidget, RAMWidget, GPUWidget, PartitionsWidget, StorageWidget
+from widgets.system_widgets import CPUWidget, RAMWidget, GPUWidget, PartitionsWidget, StorageWidget, CalendarWidget, ClockWidget, UptimeWidget
 from widgets.toast import ToastManager
 
 
@@ -169,6 +169,9 @@ class OptiPCApp(ctk.CTk):
             "partitions": PartitionsWidget,
             "storage": StorageWidget,
             "network_speed": NetworkSpeedWidget,
+            "calendar": CalendarWidget,
+            "clock": ClockWidget,
+            "uptime": UptimeWidget,
         }
 
     def get_widget_theme_name(self) -> str:
@@ -208,6 +211,9 @@ class OptiPCApp(ctk.CTk):
             "partitions": "partitions_widget",
             "storage": "storage_widget",
             "network_speed": "network_speed_widget",
+            "calendar": "calendar_widget",
+            "clock": "clock_widget",
+            "uptime": "uptime_widget",
         }
         setattr(self, attr_map[key], widget)
 
@@ -221,6 +227,9 @@ class OptiPCApp(ctk.CTk):
                 "partitions": "partitions_widget",
                 "storage": "storage_widget",
                 "network_speed": "network_speed_widget",
+                "calendar": "calendar_widget",
+                "clock": "clock_widget",
+                "uptime": "uptime_widget",
             }
             widget = getattr(self, attr_map[key], None)
             self.widgets[key] = widget
@@ -397,6 +406,15 @@ class OptiPCApp(ctk.CTk):
 
     def toggle_network_speed_widget(self) -> None:
         self._toggle_widget("network_speed")
+
+    def toggle_calendar_widget(self) -> None:
+        self._toggle_widget("calendar")
+
+    def toggle_clock_widget(self) -> None:
+        self._toggle_widget("clock")
+
+    def toggle_uptime_widget(self) -> None:
+        self._toggle_widget("uptime")
 
 
 SmartPCToolkitApp = OptiPCApp

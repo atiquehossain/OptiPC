@@ -55,7 +55,7 @@ Get detailed information about your computer's health:
 - **Heavy Processes**: Find apps that are using too much memory or CPU
 - **Storage Health**: Check how much space you have left on each drive
 
-### ** Desktop Widgets - Live System Monitoring**
+### **Desktop Widgets - Live System Monitoring**
 These are small windows that stay on your desktop showing live information:
 - **CPU Monitor**: Shows how hard your processor is working (useful for gamers and professionals)
 - **RAM Monitor**: Displays memory usage (helps you know if you need more RAM)
@@ -63,6 +63,9 @@ These are small windows that stay on your desktop showing live information:
 - **Partitions**: View your disk drives and how they're organized
 - **Storage**: See how much space is left on each drive
 - **Network Speed**: Watch your internet download/upload speeds in real-time
+- **Calendar**: Interactive calendar with current date/time display and month navigation
+- **Clock**: Large digital clock with date and day display
+- **PC Uptime**: Shows how long your computer has been running since boot
 
 ### ** Advanced Features**
 - **System Tray Mode**: Minimize OptiPC to the system tray so it runs in the background
