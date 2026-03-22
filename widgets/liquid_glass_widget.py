@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import customtkinter as ctk
-from config.constants import WIDGET_THEMES
+from config.constants import WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
 
 
 class GlassWidgetCard(ctk.CTkFrame):
@@ -133,14 +133,21 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self,
         parent,
         title: str,
-        width: int = 170,
-        height: int = 170,
+        width: int = None,
+        height: int = None,
         x: int = 40,
         y: int = 40,
         widget_key: str = "",
         theme_name: str = "modern_dark",
+        size_category: str = "default",
     ) -> None:
+        # Use standard size if dimensions not provided
+        if width is None or height is None:
+            size = WIDGET_SIZES.get(size_category, WIDGET_SIZES["default"])
+            width = width if width is not None else size["width"]
+            height = height if height is not None else size["height"]
         self.widget_key = widget_key
+        self.size_category = size_category
         self.theme_name = theme_name
         
         if hasattr(parent, "get_widget_initial_geometry") and widget_key:
@@ -164,6 +171,10 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self._resize_start_h = height
         self._resize_start_win_x = x
         self._resize_start_win_y = y
+        
+        # Double-click tracking
+        self._last_click_time = 0
+        self._double_click_delay = 300  # milliseconds
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -209,23 +220,29 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             command=self.hide_widget,
         )
         self.close_button.pack(side="right")
+        
+        # Add double-click support to close button
+        self.close_button.bind("<ButtonPress-1>", self.on_close_button_click)
 
         # Main content area with glass spacing
         self.body = ctk.CTkFrame(self.container, fg_color="transparent")
         self.body.pack(fill="both", expand=True, padx=self.PADDING_HORIZONTAL, pady=(self.SPACING_TIGHT, self.PADDING_VERTICAL))
 
-        # Drag functionality
-        self.topbar.bind("<ButtonPress-1>", self.start_drag)
-        self.topbar.bind("<B1-Motion>", self.do_drag)
-        self.title_label.bind("<ButtonPress-1>", self.start_drag)
-        self.title_label.bind("<B1-Motion>", self.do_drag)
+        # Drag functionality with double-click support
+        self.topbar.bind("<ButtonPress-1>", self.on_title_click)
+        self.topbar.bind("<B1-Motion>", self.on_title_drag)
+        self.title_label.bind("<ButtonPress-1>", self.on_title_click)
+        self.title_label.bind("<B1-Motion>", self.on_title_drag)
 
-        # Resize functionality
-        for widget in (self, self.container, self.body):
-            widget.bind("<Motion>", self.on_mouse_move)
-            widget.bind("<ButtonPress-1>", self.on_mouse_down)
-            widget.bind("<B1-Motion>", self.on_mouse_drag)
-            widget.bind("<ButtonRelease-1>", self.on_mouse_up)
+        # Resize functionality - bind only to main window to prevent conflicts
+        self.bind("<Motion>", self.on_mouse_move)
+        self.bind("<ButtonPress-1>", self.on_mouse_down)
+        self.bind("<B1-Motion>", self.on_mouse_drag)
+        self.bind("<ButtonRelease-1>", self.on_mouse_up)
+        
+        # Prevent child widgets from handling resize events
+        self.container.bind("<ButtonPress-1>", self._block_child_resize_events)
+        self.body.bind("<ButtonPress-1>", self._block_child_resize_events)
 
         self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
@@ -269,8 +286,30 @@ class LiquidGlassWidget(ctk.CTkToplevel):
     def refresh_theme(self) -> None:
         """Override in subclasses to recolor child controls."""
 
+    def get_responsive_font_size(self, size_key: str) -> int:
+        """Get fixed font size instead of responsive scaling."""
+        # Disable responsive scaling - return fixed sizes
+        fixed_sizes = {
+            "tiny": 9,
+            "small": 11,
+            "body": 12,
+            "label": 13,
+            "title": 15,
+            "metric": 18,
+            "hero": 20,
+        }
+        return fixed_sizes.get(size_key, 12)
+
+    def create_glass_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
+        """Create a glass-style label with proper typography."""
+        return ctk.CTkLabel(
+            parent,
+            text=text,
+            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight),
+            text_color=self.theme.get(color_key, self.theme["text"])
+        )
+
     def create_glass_panel(self, parent, corner_radius: int = None, accent_tint: str = None) -> ctk.CTkFrame:
-        """Create a glass panel with optional accent tint."""
         if corner_radius is None:
             corner_radius = self.CORNER_RADIUS_MEDIUM
             
@@ -333,7 +372,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self._get_font_size("hero"), weight="semibold"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="semibold"),
             text_color=self.theme["text"]
         )
 
@@ -349,7 +388,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=13, weight="medium"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="medium"),
             border_width=0
         )
 
@@ -371,7 +410,8 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.destroy()
 
     def _on_configure(self, event) -> None:
-        if event.widget is not self:
+        # Disable configure handler during resize to prevent layout conflicts
+        if event.widget is not self or self._is_resizing:
             return
         if self._geometry_save_after_id is not None:
             try:
@@ -401,12 +441,80 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self._drag_start_x = event.x_root - self.winfo_x()
         self._drag_start_y = event.y_root - self.winfo_y()
 
+    def on_title_click(self, event) -> None:
+        """Handle title bar clicks with double-click detection for close and reset."""
+        import time
+        
+        current_time = time.time() * 1000  # Convert to milliseconds
+        
+        # Check for double-click
+        if current_time - self._last_click_time < self._double_click_delay:
+            # Double-click detected - close and reset widget
+            self.reset_and_close()
+            return
+        
+        # Single-click - start drag
+        self._last_click_time = current_time
+        self.start_drag(event)
+
+    def on_title_drag(self, event) -> None:
+        """Handle title bar dragging only when not resizing."""
+        # Only drag if we're not currently resizing
+        if not self._is_resizing:
+            self.do_drag(event)
+
+    def on_close_button_click(self, event) -> None:
+        """Handle close button clicks with double-click detection for close and reset."""
+        import time
+        
+        current_time = time.time() * 1000  # Convert to milliseconds
+        
+        # Check for double-click
+        if current_time - self._last_click_time < self._double_click_delay:
+            # Double-click detected - close and reset widget
+            self.reset_and_close()
+            return
+        
+        # Single-click - update time and let normal close proceed
+        self._last_click_time = current_time
+
+    def reset_and_close(self) -> None:
+        """Close widget and reset to default position/size."""
+        # Stop any running operations
+        self._running = False
+        
+        # Cancel any pending geometry saves
+        if self._geometry_save_after_id is not None:
+            try:
+                self.after_cancel(self._geometry_save_after_id)
+            except Exception:
+                pass
+        
+        # Reset to default geometry if widget_key exists
+        if self.widget_key and hasattr(self.master, 'reset_widget_geometry'):
+            self.master.reset_widget_geometry(self.widget_key)
+        
+        # Hide the widget
+        self.hide_widget()
+        
+        # Stop the widget completely
+        self.after(100, self.destroy_widget)
+
     def do_drag(self, event) -> None:
         if self._is_resizing:
             return
         x = event.x_root - self._drag_start_x
         y = event.y_root - self._drag_start_y
         self.geometry(f"+{x}+{y}")
+
+    def _block_child_resize_events(self, event) -> None:
+        """Prevent child widgets from handling resize events."""
+        # Check if this is a resize attempt (near edges)
+        if self.get_resize_direction(event.x, event.y):
+            # Stop the event from propagating to prevent conflicts
+            return "break"
+        # Allow normal click events to pass through
+        return None
 
     def get_resize_direction(self, x: int, y: int) -> str | None:
         width = self.winfo_width()
@@ -455,9 +563,14 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.apply_cursor(self.get_resize_direction(event.x, event.y))
 
     def on_mouse_down(self, event) -> None:
-        direction = self.get_resize_direction(event.x, event.y)
+        # Convert window coordinates to widget-relative coordinates
+        widget_x = event.x_root - self.winfo_rootx()
+        widget_y = event.y_root - self.winfo_rooty()
+        
+        direction = self.get_resize_direction(widget_x, widget_y)
         if not direction:
             return
+            
         self._is_resizing = True
         self._resize_dir = direction
         self._resize_start_x = event.x_root
@@ -466,6 +579,9 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self._resize_start_h = self.winfo_height()
         self._resize_start_win_x = self.winfo_x()
         self._resize_start_win_y = self.winfo_y()
+        
+        # Stop event propagation to prevent conflicts
+        return "break"
 
     def on_mouse_drag(self, event) -> None:
         if not self._is_resizing or not self._resize_dir:
@@ -474,6 +590,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         dx = event.x_root - self._resize_start_x
         dy = event.y_root - self._resize_start_y
 
+        # Always start from the original start values
         new_x = self._resize_start_win_x
         new_y = self._resize_start_win_y
         new_w = self._resize_start_w
@@ -481,26 +598,58 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
         direction = self._resize_dir
 
-        if "e" in direction:
+        # Calculate new dimensions based on drag direction
+        if direction == "e":  # East - resize right edge only
             new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
-
-        if "s" in direction:
-            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
-
-        if "w" in direction:
+            
+        elif direction == "w":  # West - resize left edge only
             proposed_w = self._resize_start_w - dx
             if proposed_w >= self.MIN_WIDTH:
                 new_w = proposed_w
                 new_x = self._resize_start_win_x + dx
-
-        if "n" in direction:
+                
+        elif direction == "s":  # South - resize bottom edge only
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            
+        elif direction == "n":  # North - resize top edge only
             proposed_h = self._resize_start_h - dy
             if proposed_h >= self.MIN_HEIGHT:
                 new_h = proposed_h
                 new_y = self._resize_start_win_y + dy
+                
+        elif direction == "ne":  # Northeast - resize right and bottom
+            new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            
+        elif direction == "nw":  # Northwest - resize left and top
+            proposed_w = self._resize_start_w - dx
+            proposed_h = self._resize_start_h - dy
+            if proposed_w >= self.MIN_WIDTH:
+                new_w = proposed_w
+                new_x = self._resize_start_win_x + dx
+            if proposed_h >= self.MIN_HEIGHT:
+                new_h = proposed_h
+                new_y = self._resize_start_win_y + dy
+                
+        elif direction == "se":  # Southeast - resize right and bottom
+            new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            
+        elif direction == "sw":  # Southwest - resize left and bottom
+            proposed_w = self._resize_start_w - dx
+            if proposed_w >= self.MIN_WIDTH:
+                new_w = proposed_w
+                new_x = self._resize_start_win_x + dx
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
 
         self.geometry(f"{int(new_w)}x{int(new_h)}+{int(new_x)}+{int(new_y)}")
+        
+        # Stop event propagation during resize
+        return "break"
 
     def on_mouse_up(self, event) -> None:
         self._is_resizing = False
         self._resize_dir = None
+        
+        # Stop event propagation to prevent conflicts
+        return "break"

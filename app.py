@@ -228,6 +228,10 @@ class OptiPCApp(ctk.CTk):
     def save_widget_geometry(self, key: str, *, x: int, y: int, width: int, height: int) -> None:
         self.widget_state_service.set_widget_geometry(key, x=x, y=y, width=width, height=height)
 
+    def reset_widget_geometry(self, key: str) -> None:
+        """Reset widget geometry to default values."""
+        self.widget_state_service.reset_widget_geometry(key)
+
     def on_widget_visibility_changed(self, key: str, visible: bool) -> None:
         self.widget_state_service.set_widget_visible(key, visible)
 

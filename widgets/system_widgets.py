@@ -19,14 +19,14 @@ from config.constants import FONT_SIZES
 
 class CPUWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 40):
-        super().__init__(parent, "CPU Usage", 300, 190, x, y, widget_key="cpu")
-        self.percent_label = ctk.CTkLabel(self.body, text="0%", font=ctk.CTkFont(size=FONT_SIZES["hero"], weight="bold"))
+        super().__init__(parent, "CPU Usage", size_category="small", x=x, y=y, widget_key="cpu")
+        self.percent_label = self.create_responsive_label(self.body, "0%", "metric", "bold")
         self.percent_label.pack(pady=(4, 2))
-        self.detail_label = ctk.CTkLabel(self.body, text="Cores: 0", font=ctk.CTkFont(size=FONT_SIZES["body"]))
+        self.detail_label = self.create_responsive_label(self.body, "Cores: 0", "body")
         self.detail_label.pack()
-        self.freq_label = ctk.CTkLabel(self.body, text="Frequency: N/A", font=ctk.CTkFont(size=FONT_SIZES["small"]))
+        self.freq_label = self.create_responsive_label(self.body, "Frequency: N/A", "small")
         self.freq_label.pack(pady=(2, 2))
-        self.progress = ctk.CTkProgressBar(self.body, width=220)
+        self.progress = ctk.CTkProgressBar(self.body, width=180)
         self.progress.pack(fill="x", padx=4, pady=(12, 6))
         self.progress.set(0)
         self.apply_theme()
@@ -59,14 +59,14 @@ class CPUWidget(BaseMiniWidget):
 
 class RAMWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 360, y: int = 40):
-        super().__init__(parent, "RAM Usage", 300, 180, x, y, widget_key="ram")
-        self.percent_label = ctk.CTkLabel(self.body, text="0%", font=ctk.CTkFont(size=FONT_SIZES["hero"], weight="bold"))
+        super().__init__(parent, "RAM Usage", size_category="small", x=x, y=y, widget_key="ram")
+        self.percent_label = self.create_responsive_label(self.body, "0%", "metric", "bold")
         self.percent_label.pack(pady=(6, 2))
-        self.detail_label = ctk.CTkLabel(self.body, text="0 GB / 0 GB", font=ctk.CTkFont(size=FONT_SIZES["body"]))
+        self.detail_label = self.create_responsive_label(self.body, "0 GB / 0 GB", "body")
         self.detail_label.pack()
-        self.avail_label = ctk.CTkLabel(self.body, text="Available: 0 GB", font=ctk.CTkFont(size=FONT_SIZES["small"]))
+        self.avail_label = self.create_responsive_label(self.body, "Available: 0 GB", "small")
         self.avail_label.pack(pady=(2, 2))
-        self.progress = ctk.CTkProgressBar(self.body, width=220)
+        self.progress = ctk.CTkProgressBar(self.body, width=180)
         self.progress.pack(fill="x", padx=4, pady=(12, 6))
         self.progress.set(0)
         self.apply_theme()
@@ -99,17 +99,17 @@ class RAMWidget(BaseMiniWidget):
 
 class GPUWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 680, y: int = 40):
-        super().__init__(parent, "GPU Usage", 320, 190, x, y, widget_key="gpu")
-        self.name_label = ctk.CTkLabel(self.body, text="GPU: Detecting...", font=ctk.CTkFont(size=FONT_SIZES["label"], weight="bold"), wraplength=280, justify="left")
+        super().__init__(parent, "GPU Usage", size_category="small", x=x, y=y, widget_key="gpu")
+        self.name_label = self.create_responsive_label(self.body, "GPU: Detecting...", "label", "bold")
         self.name_label.pack(anchor="w", pady=(4, 6))
-        self.percent_label = ctk.CTkLabel(self.body, text="N/A", font=ctk.CTkFont(size=FONT_SIZES["metric"], weight="bold"))
+        self.percent_label = self.create_responsive_label(self.body, "N/A", "metric", "bold")
         self.percent_label.pack()
-        self.mem_label = ctk.CTkLabel(self.body, text="Memory: N/A", font=ctk.CTkFont(size=FONT_SIZES["body"]))
+        self.mem_label = self.create_responsive_label(self.body, "Memory: N/A", "body")
         self.mem_label.pack(pady=(4, 6))
-        self.progress = ctk.CTkProgressBar(self.body, width=220)
+        self.progress = ctk.CTkProgressBar(self.body, width=180)
         self.progress.pack(fill="x", padx=4, pady=(8, 4))
         self.progress.set(0)
-        self.note_label = ctk.CTkLabel(self.body, text="Some systems may not expose GPU usage", font=ctk.CTkFont(size=FONT_SIZES["small"]))
+        self.note_label = self.create_responsive_label(self.body, "Some systems may not expose GPU usage", "small")
         self.note_label.pack()
         self.apply_theme()
         self.update_stats()
@@ -151,7 +151,7 @@ class GPUWidget(BaseMiniWidget):
 
 class PartitionsWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 250):
-        super().__init__(parent, "Drive Partitions", 460, 300, x, y, widget_key="partitions")
+        super().__init__(parent, "Drive Partitions", size_category="large", x=x, y=y, widget_key="partitions")
         self.text = ctk.CTkTextbox(self.body, height=230, corner_radius=12)
         self.text.pack(fill="both", expand=True)
         self.apply_theme()
@@ -194,7 +194,7 @@ class PartitionsWidget(BaseMiniWidget):
 
 class StorageWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 540, y: int = 250):
-        super().__init__(parent, "SSD / HDD Summary", 470, 300, x, y, widget_key="storage")
+        super().__init__(parent, "SSD / HDD Summary", size_category="large", x=x, y=y, widget_key="storage")
         self.text = ctk.CTkTextbox(self.body, height=230, corner_radius=12)
         self.text.pack(fill="both", expand=True)
         self.apply_theme()
@@ -238,7 +238,7 @@ class StorageWidget(BaseMiniWidget):
 
 class CalendarWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 570):
-        super().__init__(parent, "Calendar", 350, 400, x, y, widget_key="calendar")
+        super().__init__(parent, "Calendar", size_category="extra_large", x=x, y=y, widget_key="calendar")
         
         # Current date tracking
         self.current_date = datetime.now()
@@ -273,10 +273,11 @@ class CalendarWidget(BaseMiniWidget):
         self.prev_btn.pack(side="left", padx=(0, 8))
         
         # Month/Year label
-        self.month_label = ctk.CTkLabel(
+        self.month_label = self.create_responsive_label(
             nav_frame,
-            text="",
-            font=ctk.CTkFont(size=FONT_SIZES["title"], weight="bold")
+            "",
+            "title",
+            "bold"
         )
         self.month_label.pack(side="left", expand=True)
         
@@ -308,13 +309,13 @@ class CalendarWidget(BaseMiniWidget):
         self.day_labels = []
         days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for i, day in enumerate(days):
-            label = ctk.CTkLabel(
+            label = self.create_responsive_label(
                 self.calendar_frame,
-                text=day,
-                font=ctk.CTkFont(size=FONT_SIZES["small"], weight="bold"),
-                width=40,
-                height=25
+                day,
+                "small",
+                "bold"
             )
+            label.configure(width=40, height=25)
             label.grid(row=0, column=i, padx=2, pady=2)
             self.day_labels.append(label)
         
@@ -329,7 +330,7 @@ class CalendarWidget(BaseMiniWidget):
                     width=40,
                     height=35,
                     corner_radius=8,
-                    font=ctk.CTkFont(size=FONT_SIZES["body"]),
+                    font=ctk.CTkFont(size=self.get_responsive_font_size("body")),
                     text_color="#ffffff",  # Force white text initially
                     command=lambda w=week, d=day: self.day_clicked(w, d)
                 )
@@ -338,10 +339,10 @@ class CalendarWidget(BaseMiniWidget):
             self.day_buttons.append(week_buttons)
         
         # Current date/time display
-        self.datetime_label = ctk.CTkLabel(
+        self.datetime_label = self.create_responsive_label(
             self.body,
-            text="",
-            font=ctk.CTkFont(size=FONT_SIZES["small"])
+            "",
+            "small"
         )
         self.datetime_label.pack(pady=(4, 8))
 
@@ -406,21 +407,21 @@ class CalendarWidget(BaseMiniWidget):
                             fg_color=self.theme.get("accent", "#1f6aa5"),
                             hover_color=self.theme.get("button_hover", "#343638"),
                             text_color="white",
-                            font=ctk.CTkFont(size=FONT_SIZES["body"], weight="bold")
+                            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="bold")
                         )
                     elif is_weekend:
                         btn.configure(
                             fg_color=self.theme.get("panel", "#212121"),
                             hover_color=self.theme.get("button_hover", "#343638"),
                             text_color=self.theme.get("accent", "#1f6aa5"),
-                            font=ctk.CTkFont(size=FONT_SIZES["body"])
+                            font=ctk.CTkFont(size=self.get_responsive_font_size("body"))
                         )
                     else:
                         btn.configure(
                             fg_color=self.theme.get("panel", "#212121"),
                             hover_color=self.theme.get("button_hover", "#343638"),
                             text_color=self.theme.get("text", "#ffffff"),
-                            font=ctk.CTkFont(size=FONT_SIZES["body"])
+                            font=ctk.CTkFont(size=self.get_responsive_font_size("body"))
                         )
                 else:
                     btn.configure(
@@ -494,7 +495,7 @@ class CalendarWidget(BaseMiniWidget):
 
 class ClockWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 400, y: int = 40):
-        super().__init__(parent, "Clock", 280, 320, x, y, widget_key="clock")
+        super().__init__(parent, "Clock", size_category="small", x=x, y=y, widget_key="clock")
         
         # Create UI elements
         self.create_clock_ui()
@@ -506,26 +507,27 @@ class ClockWidget(BaseMiniWidget):
 
     def create_clock_ui(self):
         # Main time display
-        self.time_label = ctk.CTkLabel(
+        self.time_label = self.create_responsive_label(
             self.body,
-            text="00:00:00",
-            font=ctk.CTkFont(size=FONT_SIZES["hero"], weight="bold")
+            "00:00:00",
+            "hero",
+            "bold"
         )
         self.time_label.pack(pady=(20, 10))
         
         # Date display
-        self.date_label = ctk.CTkLabel(
+        self.date_label = self.create_responsive_label(
             self.body,
-            text="Loading...",
-            font=ctk.CTkFont(size=FONT_SIZES["title"])
+            "Loading...",
+            "title"
         )
         self.date_label.pack(pady=(0, 10))
         
         # Day of week display
-        self.day_label = ctk.CTkLabel(
+        self.day_label = self.create_responsive_label(
             self.body,
-            text="Loading...",
-            font=ctk.CTkFont(size=FONT_SIZES["body"])
+            "Loading...",
+            "body"
         )
         self.day_label.pack(pady=(0, 20))
 
@@ -561,7 +563,7 @@ class ClockWidget(BaseMiniWidget):
 
 class UptimeWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 720, y: int = 40):
-        super().__init__(parent, "PC Uptime", 320, 200, x, y, widget_key="uptime")
+        super().__init__(parent, "PC Uptime", size_category="small", x=x, y=y, widget_key="uptime")
         
         # Boot time calculation
         self.boot_time = datetime.fromtimestamp(psutil.boot_time())
@@ -576,18 +578,19 @@ class UptimeWidget(BaseMiniWidget):
 
     def create_uptime_ui(self):
         # Uptime display
-        self.uptime_label = ctk.CTkLabel(
+        self.uptime_label = self.create_responsive_label(
             self.body,
-            text="Calculating...",
-            font=ctk.CTkFont(size=FONT_SIZES["title"], weight="bold")
+            "Calculating...",
+            "title",
+            "bold"
         )
         self.uptime_label.pack(pady=(20, 10))
         
         # Boot time display
-        self.boot_label = ctk.CTkLabel(
+        self.boot_label = self.create_responsive_label(
             self.body,
-            text="Loading boot time...",
-            font=ctk.CTkFont(size=FONT_SIZES["body"])
+            "Loading boot time...",
+            "body"
         )
         self.boot_label.pack(pady=(0, 20))
 

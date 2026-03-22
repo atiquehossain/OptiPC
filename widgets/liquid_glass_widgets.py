@@ -12,7 +12,7 @@ class LiquidCPUWidget(LiquidGlassWidget):
     """Liquid glass CPU widget with frosted glass appearance."""
     
     def __init__(self, parent, x: int = 40, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "CPU", 170, 170, x, y, widget_key="cpu", theme_name=theme_name)
+        super().__init__(parent, "CPU", size_category="small", x=x, y=y, widget_key="cpu", theme_name=theme_name)
         
         # Main CPU percentage display
         self.percent_label = self.create_glass_metric_label(self.body, "0%")
@@ -83,7 +83,7 @@ class LiquidRAMWidget(LiquidGlassWidget):
     """Liquid glass RAM widget with clean memory display."""
     
     def __init__(self, parent, x: int = 360, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Memory", 170, 170, x, y, widget_key="ram", theme_name=theme_name)
+        super().__init__(parent, "Memory", size_category="small", x=x, y=y, widget_key="ram", theme_name=theme_name)
         
         # Main memory percentage
         self.percent_label = self.create_glass_metric_label(self.body, "0%")
@@ -152,7 +152,7 @@ class LiquidGPUWidget(LiquidGlassWidget):
     """Liquid glass GPU widget with elegant display."""
     
     def __init__(self, parent, x: int = 680, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "GPU", 170, 170, x, y, widget_key="gpu", theme_name=theme_name)
+        super().__init__(parent, "GPU", size_category="small", x=x, y=y, widget_key="gpu", theme_name=theme_name)
         
         # GPU name
         self.name_label = self.create_glass_label(
@@ -242,7 +242,7 @@ class LiquidStorageWidget(LiquidGlassWidget):
     """Liquid glass Storage widget with elegant usage display."""
     
     def __init__(self, parent, x: int = 540, y: int = 250, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Storage", 360, 170, x, y, widget_key="storage", theme_name=theme_name)
+        super().__init__(parent, "Storage", size_category="large", x=x, y=y, widget_key="storage", theme_name=theme_name)
         
         # Main storage usage
         self.usage_label = self.create_glass_metric_label(self.body, "0 GB")
@@ -329,7 +329,7 @@ class LiquidPartitionsWidget(LiquidGlassWidget):
     """Liquid glass Partitions widget with clean list layout."""
     
     def __init__(self, parent, x: int = 40, y: int = 250, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Partitions", 360, 170, x, y, widget_key="partitions", theme_name=theme_name)
+        super().__init__(parent, "Partitions", size_category="large", x=x, y=y, widget_key="partitions", theme_name=theme_name)
         
         # Scrollable frame for partition list
         self.scroll_frame = ctk.CTkScrollableFrame(
@@ -480,7 +480,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
     """Liquid glass Calendar widget with macOS-style design."""
     
     def __init__(self, parent, x: int = 40, y: int = 570, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Calendar", 360, 380, x, y, widget_key="calendar", theme_name=theme_name)
+        super().__init__(parent, "Calendar", size_category="extra_large", x=x, y=y, widget_key="calendar", theme_name=theme_name)
         
         # Current date tracking
         from datetime import datetime
@@ -774,7 +774,7 @@ class LiquidClockWidget(LiquidGlassWidget):
     """Liquid glass Clock widget with elegant time display."""
     
     def __init__(self, parent, x: int = 400, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Clock", 170, 170, x, y, widget_key="clock", theme_name=theme_name)
+        super().__init__(parent, "Clock", size_category="small", x=x, y=y, widget_key="clock", theme_name=theme_name)
         
         # Create UI elements
         self.create_clock_ui()
@@ -844,7 +844,7 @@ class LiquidUptimeWidget(LiquidGlassWidget):
     """Liquid glass PC Uptime widget with minimal, elegant design."""
     
     def __init__(self, parent, x: int = 720, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Uptime", 170, 170, x, y, widget_key="uptime", theme_name=theme_name)
+        super().__init__(parent, "Uptime", size_category="small", x=x, y=y, widget_key="uptime", theme_name=theme_name)
         
         # Boot time calculation
         from datetime import datetime

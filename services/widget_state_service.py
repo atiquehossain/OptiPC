@@ -53,6 +53,21 @@ class WidgetStateService:
         })
         self.save()
 
+    def reset_widget_geometry(self, key: str) -> None:
+        """Remove saved geometry for a widget, forcing it to use defaults."""
+        widgets = self._state.setdefault("widgets", {})
+        if key in widgets:
+            widget = widgets[key]
+            # Remove geometry fields but keep visibility state
+            widget.pop("x", None)
+            widget.pop("y", None)
+            widget.pop("width", None)
+            widget.pop("height", None)
+            # If widget is now empty, remove it entirely
+            if not widget:
+                widgets.pop(key, None)
+            self.save()
+
     def get_main_window_state(self) -> dict[str, Any]:
         return dict(self._state.get("main_window", {}))
 

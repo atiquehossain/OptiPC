@@ -16,6 +16,55 @@ FONT_SIZES = {
     "hero": 30,
 }
 
+# Responsive Widget Font Sizes (scale with widget size)
+RESPONSIVE_FONT_SIZES = {
+    "default": {
+        "tiny": 9,
+        "small": 11,
+        "body": 12,
+        "label": 13,
+        "title": 15,
+        "metric": 18,
+        "hero": 20,
+    },
+    "small": {
+        "tiny": 9,
+        "small": 11,
+        "body": 12,
+        "label": 13,
+        "title": 15,
+        "metric": 18,
+        "hero": 20,
+    },
+    "medium": {
+        "tiny": 10,
+        "small": 12,
+        "body": 13,
+        "label": 14,
+        "title": 16,
+        "metric": 22,
+        "hero": 24,
+    },
+    "large": {
+        "tiny": 11,
+        "small": 13,
+        "body": 14,
+        "label": 15,
+        "title": 18,
+        "metric": 26,
+        "hero": 28,
+    },
+    "extra_large": {
+        "tiny": 12,
+        "small": 14,
+        "body": 15,
+        "label": 16,
+        "title": 20,
+        "metric": 30,
+        "hero": 32,
+    },
+}
+
 # Modern Design System
 COLORS = {
     # Primary Colors
@@ -260,6 +309,15 @@ WIDGET_THEMES = {
         "clock_accent": "rgba(10, 132, 255, 0.1)",
         "runtime_accent": "rgba(168, 168, 173, 0.1)",
     },
+}
+
+# Standard Widget Dimensions
+WIDGET_SIZES = {
+    "small": {"width": 200, "height": 200},      # Compact widgets (CPU, RAM, GPU, Clock, Uptime)
+    "medium": {"width": 320, "height": 220},     # Medium widgets (Network Speed)
+    "large": {"width": 400, "height": 220},      # Large widgets (Storage, Partitions)
+    "extra_large": {"width": 400, "height": 420}, # Extra large widgets (Calendar)
+    "default": {"width": 200, "height": 200},    # Default size for new widgets
 }
 
 DEFAULT_APP_SETTINGS = {
