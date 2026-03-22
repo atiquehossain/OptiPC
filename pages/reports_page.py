@@ -47,19 +47,19 @@ class ReportsPage(BasePage):
         log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
         self.logger.bind(log_box.append)
         self.logger.write("Reports page ready.")
-        self.status_service.set_status("Reports page ready", busy=False)
+        self.status_service.info("Reports page ready", toast=False)
 
     def _run_report_task(self, name: str, task) -> None:
         if self.loading_indicator.is_running:
             self.logger.write("Another report is already running.")
             return
         self.loading_indicator.start(f"Generating {name}...")
-        self.status_service.set_status(f"Generating {name}...", busy=True)
+        self.status_service.busy(f"Generating {name}...")
         TaskRunner.run(task, lambda result: self._on_report_success(name, result), self._on_report_error, self.after)
 
     def _on_report_success(self, name: str, result) -> None:
         self.loading_indicator.stop(f"{name} completed")
-        self.status_service.set_status(f"{name} completed", busy=False)
+        self.status_service.success(f"{name} completed", toast=True)
         if isinstance(result, str):
             self.logger.write(result)
         else:
@@ -67,7 +67,7 @@ class ReportsPage(BasePage):
 
     def _on_report_error(self, exc: Exception) -> None:
         self.loading_indicator.error("Report failed")
-        self.status_service.set_status("Report error", busy=False)
+        self.status_service.error("Report error", toast=True)
         self.logger.write(f"Report error: {exc}")
 
     def _battery_report(self) -> None:

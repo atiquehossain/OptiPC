@@ -2,31 +2,48 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
+from config.constants import FONT_SIZES, WIDGET_THEMES
+
 
 class BaseMiniWidget(ctk.CTkToplevel):
-    """
-    Base class for floating desktop widgets.
+    """Base class for floating desktop widgets.
 
-    Features
-    --------
-    - Frameless floating window
-    - Always on top
-    - Drag from title bar
-    - Resize from all edges and corners
-    - Close button that hides the widget instead of destroying it
+    Design goals:
+    - single instance managed by the main app
+    - draggable from the title area
+    - resizable from every edge and corner
+    - themeable using the shared widget themes
+    - remembers size and position through the parent app
     """
 
     RESIZE_BORDER = 10
     MIN_WIDTH = 220
     MIN_HEIGHT = 120
 
-    def __init__(self, parent, title: str, width: int = 280, height: int = 140, x: int = 40, y: int = 40) -> None:
+    def __init__(
+        self,
+        parent,
+        title: str,
+        width: int = 280,
+        height: int = 140,
+        x: int = 40,
+        y: int = 40,
+        widget_key: str = "",
+    ) -> None:
+        self.widget_key = widget_key
+        if hasattr(parent, "get_widget_initial_geometry") and widget_key:
+            geo = parent.get_widget_initial_geometry(widget_key, x=x, y=y, width=width, height=height)
+            x = int(geo["x"])
+            y = int(geo["y"])
+            width = int(geo["width"])
+            height = int(geo["height"])
+
         super().__init__(parent)
 
         self._running = True
+        self._geometry_save_after_id = None
         self._drag_start_x = 0
         self._drag_start_y = 0
-
         self._is_resizing = False
         self._resize_dir: str | None = None
         self._resize_start_x = 0
@@ -41,9 +58,11 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
         self.overrideredirect(True)
         self.attributes("-topmost", True)
-        self.configure(fg_color="#1b1f24")
 
-        self.container = ctk.CTkFrame(self, corner_radius=16, fg_color="#222831")
+        self.current_theme_name = self._get_initial_theme_name()
+        self.theme = WIDGET_THEMES[self.current_theme_name]
+
+        self.container = ctk.CTkFrame(self, corner_radius=16)
         self.container.pack(fill="both", expand=True, padx=4, pady=4)
 
         self.topbar = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -52,13 +71,13 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text=title,
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=ctk.CTkFont(size=FONT_SIZES["title"], weight="bold"),
         )
         self.title_label.pack(side="left")
 
         self.close_button = ctk.CTkButton(
             self.topbar,
-            text="x",
+            text="×",
             width=28,
             height=28,
             corner_radius=14,
@@ -80,19 +99,94 @@ class BaseMiniWidget(ctk.CTkToplevel):
             widget.bind("<B1-Motion>", self.on_mouse_drag)
             widget.bind("<ButtonRelease-1>", self.on_mouse_up)
 
+        self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
 
+        # Apply the shared theme only to the base controls here.
+        # Child controls do not exist yet, so subclasses call apply_theme()
+        # after creating their own widgets.
+        self._apply_base_theme()
+
+        if hasattr(parent, "on_widget_visibility_changed") and widget_key:
+            self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
+
+    def _get_initial_theme_name(self) -> str:
+        if hasattr(self.master, "get_widget_theme_name"):
+            return str(self.master.get_widget_theme_name())
+        return "dark"
+
+    def _apply_base_theme(self) -> None:
+        self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["dark"])
+        self.configure(fg_color=self.theme["window_bg"])
+        self.attributes("-alpha", self.theme.get("alpha", 1.0))
+        self.container.configure(fg_color=self.theme["container"])
+        self.title_label.configure(text_color=self.theme["text"])
+        self.close_button.configure(
+            fg_color=self.theme["button"],
+            hover_color=self.theme["button_hover"],
+            text_color=self.theme["text"],
+        )
+
+    def apply_theme(self, theme_name: str | None = None) -> None:
+        if theme_name is not None:
+            self.current_theme_name = theme_name
+        self._apply_base_theme()
+        self.refresh_theme()
+
+    def refresh_theme(self) -> None:
+        """Override in subclasses to recolor child controls."""
+
+    def create_panel(self, parent):
+        return ctk.CTkFrame(parent, corner_radius=12, fg_color=self.theme["panel"])
+
+    def style_textbox(self, textbox) -> None:
+        textbox.configure(
+            fg_color=self.theme["panel"],
+            text_color=self.theme["text"],
+            border_width=0,
+        )
+
     def hide_widget(self) -> None:
+        if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
+            self.master.on_widget_visibility_changed(self.widget_key, False)
         self.withdraw()
 
     def show_widget(self) -> None:
         self.deiconify()
         self.lift()
         self.attributes("-topmost", True)
+        if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
+            self.master.on_widget_visibility_changed(self.widget_key, True)
+        self._save_geometry_now()
 
     def destroy_widget(self) -> None:
         self._running = False
         self.destroy()
+
+    def _on_configure(self, event) -> None:
+        if event.widget is not self:
+            return
+        if self._geometry_save_after_id is not None:
+            try:
+                self.after_cancel(self._geometry_save_after_id)
+            except Exception:
+                pass
+        self._geometry_save_after_id = self.after(250, self._save_geometry_now)
+
+    def _save_geometry_now(self) -> None:
+        self._geometry_save_after_id = None
+        if not self.widget_key or not hasattr(self.master, "save_widget_geometry"):
+            return
+        try:
+            self.master.save_widget_geometry(
+                self.widget_key,
+                x=self.winfo_x(),
+                y=self.winfo_y(),
+                width=self.winfo_width(),
+                height=self.winfo_height(),
+            )
+        except Exception:
+            pass
 
     def start_drag(self, event) -> None:
         if self._is_resizing:
@@ -157,7 +251,6 @@ class BaseMiniWidget(ctk.CTkToplevel):
         direction = self.get_resize_direction(event.x, event.y)
         if not direction:
             return
-
         self._is_resizing = True
         self._resize_dir = direction
         self._resize_start_x = event.x_root
@@ -178,10 +271,12 @@ class BaseMiniWidget(ctk.CTkToplevel):
         new_y = self._resize_start_win_y
         new_w = self._resize_start_w
         new_h = self._resize_start_h
+
         direction = self._resize_dir
 
         if "e" in direction:
             new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
+
         if "s" in direction:
             new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
 

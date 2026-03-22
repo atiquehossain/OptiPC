@@ -59,7 +59,7 @@ class CleanupPage(BasePage):
 
         self.logger.bind(log_box.append)
         self.logger.write("Cleanup page ready.")
-        self.status_service.set_status("Cleanup page ready", busy=False)
+        self.status_service.info("Cleanup page ready", toast=False)
 
     def _set_buttons_enabled(self, enabled: bool) -> None:
         state = "normal" if enabled else "disabled"
@@ -68,7 +68,7 @@ class CleanupPage(BasePage):
 
     def _threadsafe_output(self, message: str) -> None:
         self.after(0, self.logger.write, message)
-        self.after(0, self.status_service.set_status, message, True)
+        self.after(0, self.status_service.busy, message)
 
     def _run_cleanup_task(self, title: str, task_callable) -> None:
         if self.loading_indicator.is_running:
@@ -78,7 +78,7 @@ class CleanupPage(BasePage):
         self.loading_indicator.start(f"{title}...")
         self._set_buttons_enabled(False)
         self.logger.write(f"{title} started.")
-        self.status_service.set_status(f"{title}...", busy=True)
+        self.status_service.busy(f"{title}...")
 
         TaskRunner.run(
             task=task_callable,
@@ -98,13 +98,13 @@ class CleanupPage(BasePage):
         else:
             self.logger.write(str(result))
 
-        self.status_service.set_status(f"{title} completed", busy=False)
+        self.status_service.success(f"{title} completed", toast=True)
 
     def _on_cleanup_error(self, exc: Exception) -> None:
         self.loading_indicator.error("Cleanup failed")
         self._set_buttons_enabled(True)
         self.logger.write(f"Cleanup error: {exc}")
-        self.status_service.set_status("Cleanup error", busy=False)
+        self.status_service.error("Cleanup error", toast=True)
 
     def _quick_cleanup(self) -> None:
         self._run_cleanup_task(
@@ -124,4 +124,4 @@ class CleanupPage(BasePage):
     def _empty_recycle_bin(self) -> None:
         message = self.action_service.empty_recycle_bin()
         self.logger.write(message)
-        self.status_service.set_status("Recycle Bin action finished", busy=False)
+        self.status_service.success("Recycle Bin action finished", toast=True)

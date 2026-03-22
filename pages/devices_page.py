@@ -30,34 +30,34 @@ class DevicesPage(BasePage):
         log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
         self.logger.bind(log_box.append)
         self.logger.write("Devices page ready.")
-        self.status_service.set_status("Devices page ready", busy=False)
+        self.status_service.info("Devices page ready", toast=False)
 
     def _open_sound_settings(self) -> None:
         self.logger.write("Opening Sound Settings...")
         self.action_service.open_sound_settings()
-        self.status_service.set_status("Opened Sound Settings", busy=False)
+        self.status_service.info("Opened Sound Settings", toast=False)
 
     def _open_sound_panel(self) -> None:
         self.logger.write("Opening Sound Control Panel...")
         self.action_service.open_sound_panel()
-        self.status_service.set_status("Opened Sound Control Panel", busy=False)
+        self.status_service.info("Opened Sound Control Panel", toast=False)
 
     def _list_cameras(self) -> None:
         self.logger.write("Listing cameras...")
         self.logger.write(self.action_service.list_cameras())
-        self.status_service.set_status("Camera list updated", busy=False)
+        self.status_service.info("Camera list updated", toast=False)
 
     def _open_camera_settings(self) -> None:
         self.logger.write("Opening Camera Settings...")
         self.action_service.open_camera_settings()
-        self.status_service.set_status("Opened Camera Settings", busy=False)
+        self.status_service.info("Opened Camera Settings", toast=False)
 
     def _open_privacy_settings(self) -> None:
         self.logger.write("Opening Privacy Settings...")
         self.action_service.open_privacy_settings()
-        self.status_service.set_status("Opened Privacy Settings", busy=False)
+        self.status_service.info("Opened Privacy Settings", toast=False)
 
     def _open_location_settings(self) -> None:
         self.logger.write("Opening Location Settings...")
         self.action_service.open_location_settings()
-        self.status_service.set_status("Opened Location Settings", busy=False)
+        self.status_service.info("Opened Location Settings", toast=False)

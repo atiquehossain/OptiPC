@@ -91,7 +91,7 @@ class RecoveryPage(BasePage):
         log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
         self.logger.bind(log_box.append)
         self.logger.write("Recovery page ready.")
-        self.status_service.set_status("Recovery page ready", busy=False)
+        self.status_service.info("Recovery page ready", toast=False)
 
     def _refresh_drives(self) -> None:
         drives = self.recovery_service.list_drives() or ["C:"]
@@ -122,7 +122,7 @@ class RecoveryPage(BasePage):
 
     def _threadsafe_output(self, message: str) -> None:
         self.after(0, self.logger.write, message)
-        self.after(0, self.status_service.set_status, message, True)
+        self.after(0, self.status_service.busy, message)
 
     def _start_recovery(self) -> None:
         if self.loading_indicator.is_running:
@@ -144,7 +144,7 @@ class RecoveryPage(BasePage):
         self.logger.write(preview)
         self.loading_indicator.start("Running recovery...")
         self.start_button.configure(state="disabled")
-        self.status_service.set_status("Running recovery...", busy=True)
+        self.status_service.busy("Running recovery...")
 
         TaskRunner.run(
             task=lambda: self.recovery_service.run_recovery(request, on_output=self._threadsafe_output),
@@ -157,10 +157,10 @@ class RecoveryPage(BasePage):
         self.loading_indicator.stop("Recovery finished")
         self.start_button.configure(state="normal")
         self.logger.write(f"Recovery finished with exit code: {exit_code}")
-        self.status_service.set_status("Recovery finished", busy=False)
+        self.status_service.success("Recovery finished", toast=True)
 
     def _on_recovery_error(self, exc: Exception) -> None:
         self.loading_indicator.error("Recovery failed")
         self.start_button.configure(state="normal")
         self.logger.write(f"Recovery failed: {exc}")
-        self.status_service.set_status("Recovery failed", busy=False)
+        self.status_service.error("Recovery failed", toast=True)

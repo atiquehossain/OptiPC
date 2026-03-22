@@ -1,5 +1,7 @@
 customtkinter>=5.2.2
 psutil>=5.9.8
+GPUtil
+pystray
+Pillow
 customtkinter
 psutil
-GPUtil

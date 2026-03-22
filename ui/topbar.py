@@ -1,8 +1,11 @@
+
 from __future__ import annotations
 
 import platform
 import socket
 import customtkinter as ctk
+
+from config.constants import APP_NAME, FONT_SIZES
 
 
 class Topbar(ctk.CTkFrame):
@@ -11,7 +14,7 @@ class Topbar(ctk.CTkFrame):
         self.grid_propagate(False)
         self.grid_columnconfigure(1, weight=1)
 
-        self.title_label = ctk.CTkLabel(self, text="Dashboard", font=ctk.CTkFont(size=26, weight="bold"))
+        self.title_label = ctk.CTkLabel(self, text="Dashboard", font=ctk.CTkFont(size=FONT_SIZES["page_title"], weight="bold"))
         self.title_label.grid(row=0, column=0, padx=20, pady=18, sticky="w")
 
         self.badge_label = ctk.CTkLabel(
@@ -26,7 +29,6 @@ class Topbar(ctk.CTkFrame):
 
         self.theme_switch = ctk.CTkSegmentedButton(self, values=["Dark", "Light"], command=on_theme_change, width=140)
         self.theme_switch.grid(row=0, column=2, padx=(8, 20), pady=18, sticky="e")
-        self.theme_switch.set("Dark")
 
     def set_title(self, title: str) -> None:
         self.title_label.configure(text=title)

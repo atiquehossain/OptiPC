@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -48,7 +49,13 @@ class WallpaperPage(BasePage):
 
         right = self.make_card(wrapper, "Notes", "Wallpaper feature info")
         right.grid(row=0, column=1, padx=8, pady=8, sticky="nsew")
-        ctk.CTkLabel(right, text="Supported image types: JPG, JPEG, PNG, BMP.\nWallpaper changes do not need admin rights.\nUse Backup Current before changing the wallpaper if you want easy restore.", justify="left", wraplength=420, text_color="gray75").pack(anchor="w", padx=18, pady=(0, 18))
+        ctk.CTkLabel(
+            right,
+            text="Supported image types: JPG, JPEG, PNG, BMP.\nWallpaper changes do not need admin rights.\nUse Backup Current before changing the wallpaper if you want easy restore.",
+            justify="left",
+            wraplength=420,
+            text_color="gray75",
+        ).pack(anchor="w", padx=18, pady=(0, 18))
 
         log_card = self.make_card(wrapper, "Wallpaper Output")
         log_card.grid(row=1, column=0, columnspan=2, padx=8, pady=8, sticky="nsew")
@@ -56,10 +63,13 @@ class WallpaperPage(BasePage):
         log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
         self.logger.bind(log_box.append)
         self.logger.write("Wallpaper page loaded.")
-        self.status_service.set_status("Wallpaper page ready", busy=False)
+        self.status_service.info("Wallpaper page ready", toast=False)
 
     def choose_image(self) -> None:
-        path = filedialog.askopenfilename(title="Choose wallpaper image", filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp"), ("All files", "*.*")])
+        path = filedialog.askopenfilename(
+            title="Choose wallpaper image",
+            filetypes=[("Image files", "*.jpg *.jpeg *.png *.bmp"), ("All files", "*.*")],
+        )
         if path:
             self.image_var.set(path)
             self.logger.write(f"Selected image:\n{path}")
@@ -67,18 +77,30 @@ class WallpaperPage(BasePage):
     def show_current_wallpaper(self) -> None:
         current = self.wallpaper_service.get_current_wallpaper()
         self.logger.write(f"Current wallpaper:\n{current}" if current else "Could not read current wallpaper.")
+        self.status_service.info("Current wallpaper loaded", toast=False)
 
     def set_selected_wallpaper(self) -> None:
         result = self.wallpaper_service.set_wallpaper(self.image_var.get().strip(), style=self.style_var.get().strip())
         self.logger.write(result.message)
-        self.status_service.set_status("Wallpaper action finished", busy=False)
+        if result.success:
+            self.status_service.success("Wallpaper changed", toast=True)
+        else:
+            self.status_service.error("Wallpaper action failed", toast=True)
 
     def backup_current_wallpaper(self) -> None:
         backup_file = self.report_dir / "wallpaper_backup.txt"
         result = self.wallpaper_service.save_current_wallpaper_backup(str(backup_file))
         self.logger.write(result.message)
+        if result.success:
+            self.status_service.success("Wallpaper backup saved", toast=True)
+        else:
+            self.status_service.error("Wallpaper backup failed", toast=True)
 
     def restore_backup_wallpaper(self) -> None:
         backup_file = self.report_dir / "wallpaper_backup.txt"
         result = self.wallpaper_service.restore_wallpaper_from_backup(str(backup_file), style=self.style_var.get().strip())
         self.logger.write(result.message)
+        if result.success:
+            self.status_service.success("Wallpaper restored", toast=True)
+        else:
+            self.status_service.error("Wallpaper restore failed", toast=True)

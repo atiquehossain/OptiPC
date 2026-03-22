@@ -33,8 +33,8 @@ class RepairPage(BasePage):
         log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
         self.logger.bind(log_box.append)
         self.logger.write("Repair page ready.")
-        self.status_service.set_status("Repair page ready", busy=False)
+        self.status_service.info("Repair page ready", toast=False)
 
     def _run_admin(self, command: str) -> None:
         self.logger.write(self.action_service.run_elevated_command(command))
-        self.status_service.set_status("Admin command launched", busy=False)
+        self.status_service.info("Admin command launched", toast=True)
