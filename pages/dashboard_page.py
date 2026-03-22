@@ -8,6 +8,7 @@ import psutil
 from pages.base_page import BasePage
 from widgets.log_box import LogBox
 from widgets.metric_card import MetricCard
+from config.constants import DASHBOARD_ICONS, THEMES, UI_SPECS
 
 
 class DashboardPage(BasePage):
@@ -16,60 +17,96 @@ class DashboardPage(BasePage):
         wrapper.grid(row=0, column=0, sticky="nsew")
         wrapper.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
+        # System Metrics Cards
         metrics = [
-            ("CPU Usage", self.system_service.get_cpu_usage()),
-            ("RAM Total", self.system_service.get_memory_total()),
-            ("Disk Free", self.system_service.get_disk_free()),
-            ("Windows", platform.release()),
+            (DASHBOARD_ICONS["CPU Usage"], self.system_service.get_cpu_usage()),
+            (DASHBOARD_ICONS["RAM Total"], self.system_service.get_memory_total()),
+            (DASHBOARD_ICONS["Disk Free"], self.system_service.get_disk_free()),
+            (DASHBOARD_ICONS["Windows"], platform.release()),
         ]
+        
+        metric_titles = ["CPU Usage", "RAM Total", "Disk Free", "Windows"]
 
-        for index, (title, value) in enumerate(metrics):
-            card = MetricCard(wrapper, title, value)
-            card.grid(row=0, column=index, padx=8, pady=8, sticky="nsew")
+        for index, (icon, value) in enumerate(metrics):
+            card = MetricCard(wrapper, f"{icon} {metric_titles[index]}", value)
+            card.grid(row=0, column=index, padx=UI_SPECS["cards"]["header_padding"], pady=UI_SPECS["cards"]["header_padding"], sticky="nsew")
 
-        quick_actions = self.make_card(wrapper, "Quick Actions", "Most-used tools and desktop widgets")
-        quick_actions.grid(row=1, column=0, columnspan=2, padx=8, pady=8, sticky="nsew")
+        # Quick Actions Section
+        quick_actions = self.make_card(wrapper, f"{DASHBOARD_ICONS['Quick Actions']} Quick Actions", "Most-used tools and desktop widgets")
+        quick_actions.grid(row=1, column=0, columnspan=2, padx=UI_SPECS["cards"]["header_padding"], pady=UI_SPECS["cards"]["header_padding"], sticky="nsew")
 
         button_frame = ctk.CTkFrame(quick_actions, fg_color="transparent")
-        button_frame.pack(fill="x", padx=18, pady=(0, 18))
+        button_frame.pack(fill="x", padx=UI_SPECS["cards"]["content_padding"], pady=(0, UI_SPECS["cards"]["content_padding"]))
         for i in range(3):
             button_frame.grid_columnconfigure(i, weight=1)
 
-        self.make_action_button(button_frame, "Quick Cleanup", self._quick_cleanup).grid(row=0, column=0, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "System Info", self._show_system_info).grid(row=0, column=1, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "Open Settings", self.action_service.open_windows_settings).grid(row=0, column=2, padx=6, pady=6, sticky="ew")
+        # System Tools Row
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Quick Cleanup']} Quick Cleanup", self._quick_cleanup).grid(row=0, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['System Info']} System Info", self._show_system_info).grid(row=0, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Open Settings']} Open Settings", self.action_service.open_windows_settings).grid(row=0, column=2, padx=8, pady=8, sticky="ew")
 
-        self.make_action_button(button_frame, "CPU Widget", lambda: self._open_widget("toggle_cpu_widget", "CPU Widget")).grid(row=1, column=0, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "RAM Widget", lambda: self._open_widget("toggle_ram_widget", "RAM Widget")).grid(row=1, column=1, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "GPU Widget", lambda: self._open_widget("toggle_gpu_widget", "GPU Widget")).grid(row=1, column=2, padx=6, pady=6, sticky="ew")
+        # System Widgets Row 1
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['CPU Widget']} CPU Widget", lambda: self._open_widget("toggle_cpu_widget", "CPU Widget")).grid(row=1, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['RAM Widget']} RAM Widget", lambda: self._open_widget("toggle_ram_widget", "RAM Widget")).grid(row=1, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['GPU Widget']} GPU Widget", lambda: self._open_widget("toggle_gpu_widget", "GPU Widget")).grid(row=1, column=2, padx=8, pady=8, sticky="ew")
 
-        self.make_action_button(button_frame, "Partitions Widget", lambda: self._open_widget("toggle_partitions_widget", "Partitions Widget")).grid(row=2, column=0, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "Storage Widget", lambda: self._open_widget("toggle_storage_widget", "Storage Widget")).grid(row=2, column=1, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "Calendar Widget", lambda: self._open_widget("toggle_calendar_widget", "Calendar Widget")).grid(row=2, column=2, padx=6, pady=6, sticky="ew")
+        # System Widgets Row 2
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Partitions Widget']} Partitions Widget", lambda: self._open_widget("toggle_partitions_widget", "Partitions Widget")).grid(row=2, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Storage Widget']} Storage Widget", lambda: self._open_widget("toggle_storage_widget", "Storage Widget")).grid(row=2, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Calendar Widget']} Calendar Widget", lambda: self._open_widget("toggle_calendar_widget", "Calendar Widget")).grid(row=2, column=2, padx=8, pady=8, sticky="ew")
 
-        self.make_action_button(button_frame, "Net Speed Widget", lambda: self._open_widget("toggle_network_speed_widget", "Net Speed Widget")).grid(row=3, column=0, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "Clock Widget", lambda: self._open_widget("toggle_clock_widget", "Clock Widget")).grid(row=3, column=1, padx=6, pady=6, sticky="ew")
-        self.make_action_button(button_frame, "Uptime Widget", lambda: self._open_widget("toggle_uptime_widget", "Uptime Widget")).grid(row=3, column=2, padx=6, pady=6, sticky="ew")
+        # System Widgets Row 3
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Net Speed Widget']} Net Speed Widget", lambda: self._open_widget("toggle_network_speed_widget", "Net Speed Widget")).grid(row=3, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Clock Widget']} Clock Widget", lambda: self._open_widget("toggle_clock_widget", "Clock Widget")).grid(row=3, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Uptime Widget']} Uptime Widget", lambda: self._open_widget("toggle_uptime_widget", "Uptime Widget")).grid(row=3, column=2, padx=8, pady=8, sticky="ew")
+        # Live CPU Monitor
+        live_card = self.make_card(wrapper, f"{DASHBOARD_ICONS['Live CPU Monitor']} Live CPU Monitor", "Real-time CPU performance monitoring")
+        live_card.grid(row=1, column=2, columnspan=2, padx=UI_SPECS["cards"]["header_padding"], pady=UI_SPECS["cards"]["header_padding"], sticky="nsew")
 
-        live_card = self.make_card(wrapper, "Live CPU Overview", "Updates automatically while the Dashboard is open")
-        live_card.grid(row=1, column=2, columnspan=2, padx=8, pady=8, sticky="nsew")
-
-        self.cpu_live_value = ctk.CTkLabel(live_card, text="0%", font=ctk.CTkFont(size=34, weight="bold"))
-        self.cpu_live_value.pack(anchor="w", padx=18, pady=(0, 0))
-        self.cpu_live_detail = ctk.CTkLabel(live_card, text="Loading CPU details...", text_color="gray75", justify="left")
-        self.cpu_live_detail.pack(anchor="w", padx=18, pady=(0, 10))
-        self.cpu_live_progress = ctk.CTkProgressBar(live_card)
-        self.cpu_live_progress.pack(fill="x", padx=18, pady=(0, 18))
+        # CPU Display Frame
+        cpu_frame = ctk.CTkFrame(live_card, fg_color="transparent")
+        cpu_frame.pack(fill="x", padx=UI_SPECS["cards"]["content_padding"], pady=(0, UI_SPECS["cards"]["content_padding"]))
+        cpu_frame.grid_columnconfigure(0, weight=1)
+        
+        # CPU Value with better styling
+        self.cpu_live_value = ctk.CTkLabel(
+            cpu_frame, 
+            text="0%", 
+            font=ctk.CTkFont(size=36, weight="bold"),
+            text_color=(THEMES["light"]["text_primary"], THEMES["dark"]["text_primary"])
+        )
+        self.cpu_live_value.grid(row=0, column=0, sticky="w", pady=(0, 8))
+        
+        # CPU Details
+        self.cpu_live_detail = ctk.CTkLabel(
+            cpu_frame, 
+            text="Loading CPU details...", 
+            text_color=(THEMES["light"]["text_secondary"], THEMES["dark"]["text_secondary"]), 
+            justify="left",
+            font=ctk.CTkFont(size=11)
+        )
+        self.cpu_live_detail.grid(row=1, column=0, sticky="w", pady=(0, 12))
+        
+        # CPU Progress Bar
+        self.cpu_live_progress = ctk.CTkProgressBar(
+            cpu_frame,
+            height=8,
+            corner_radius=4,
+            progress_color=(THEMES["light"]["button_primary"], THEMES["dark"]["button_primary"])
+        )
+        self.cpu_live_progress.grid(row=2, column=0, sticky="ew", pady=(0, 8))
         self.cpu_live_progress.set(0)
+        
         self.after(100, self._update_live_cpu)
 
-        log_card = self.make_card(wrapper, "Activity Log")
-        log_card.grid(row=2, column=0, columnspan=4, padx=8, pady=8, sticky="nsew")
+        # Activity Log
+        log_card = self.make_card(wrapper, f"{DASHBOARD_ICONS['Activity Log']} Activity Log", "Recent system activities and events")
+        log_card.grid(row=2, column=0, columnspan=4, padx=UI_SPECS["cards"]["header_padding"], pady=UI_SPECS["cards"]["header_padding"], sticky="nsew")
 
         log_box = LogBox(log_card)
-        log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
+        log_box.pack(fill="both", expand=True, padx=UI_SPECS["cards"]["content_padding"], pady=(0, UI_SPECS["cards"]["content_padding"]))
         self.logger.bind(log_box.append)
-        self.logger.write("Dashboard loaded.")
+        self.logger.write("🚀 Dashboard loaded successfully.")
         self.status_service.info("Dashboard ready", toast=False)
 
     def _update_live_cpu(self) -> None:

@@ -6,7 +6,7 @@ from tkinter import PhotoImage
 
 import customtkinter as ctk
 
-from config.constants import APP_NAME
+from config.constants import APP_NAME, THEMES
 from pages.cleanup_page import CleanupPage
 from pages.dashboard_page import DashboardPage
 from pages.devices_page import DevicesPage
@@ -30,6 +30,14 @@ from ui.statusbar import StatusBar
 from ui.topbar import Topbar
 from widgets.network_speed_widget import NetworkSpeedWidget
 from widgets.system_widgets import CPUWidget, RAMWidget, GPUWidget, PartitionsWidget, StorageWidget, CalendarWidget, ClockWidget, UptimeWidget
+from widgets.modern_system_widgets import (
+    ModernCPUWidget, ModernRAMWidget, ModernGPUWidget, ModernPartitionsWidget, 
+    ModernStorageWidget, ModernCalendarWidget, ModernClockWidget, ModernUptimeWidget
+)
+from widgets.liquid_glass_widgets import (
+    LiquidCPUWidget, LiquidRAMWidget, LiquidGPUWidget, LiquidPartitionsWidget, 
+    LiquidStorageWidget, LiquidCalendarWidget, LiquidClockWidget, LiquidUptimeWidget
+)
 from widgets.toast import ToastManager
 
 
@@ -61,6 +69,9 @@ class OptiPCApp(ctk.CTk):
         # Apply saved appearance before building UI
         ctk.set_appearance_mode(self.app_settings.get_appearance_mode().lower())
         ctk.set_default_color_theme("blue")
+        
+        # Modern color scheme
+        self.configure(fg_color=(THEMES["light"]["background"], THEMES["dark"]["background"]))
 
         self._main_geometry_after_id = None
 
@@ -89,14 +100,14 @@ class OptiPCApp(ctk.CTk):
         self.sidebar = Sidebar(self, self.show_page)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
-        self.main_area = ctk.CTkFrame(self, corner_radius=0, fg_color=("gray95", "gray12"))
+        self.main_area = ctk.CTkFrame(self, corner_radius=0, fg_color=(THEMES["light"]["background"], THEMES["dark"]["background"]))
         self.main_area.grid(row=0, column=1, sticky="nsew")
         self.main_area.grid_rowconfigure(1, weight=1)
         self.main_area.grid_columnconfigure(0, weight=1)
 
         self.topbar = Topbar(self.main_area, self.change_theme)
         self.topbar.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 10))
-        self.topbar.theme_switch.set(self.app_settings.get_appearance_mode())
+        self.topbar.theme_switch.set("🌙 Dark" if self.app_settings.get_appearance_mode() == "Dark" else "☀️ Light")
 
         self.content = ctk.CTkFrame(self.main_area, fg_color="transparent")
         self.content.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 8))
@@ -162,17 +173,35 @@ class OptiPCApp(ctk.CTk):
         )
 
     def _widget_builders(self) -> dict[str, type]:
-        return {
-            "cpu": CPUWidget,
-            "ram": RAMWidget,
-            "gpu": GPUWidget,
-            "partitions": PartitionsWidget,
-            "storage": StorageWidget,
-            "network_speed": NetworkSpeedWidget,
-            "calendar": CalendarWidget,
-            "clock": ClockWidget,
-            "uptime": UptimeWidget,
-        }
+        """Get widget builders based on current theme style."""
+        theme_name = self.get_widget_theme_name()
+        
+        # Use liquid glass widgets for modern themes
+        if theme_name.startswith("modern_"):
+            return {
+                "cpu": LiquidCPUWidget,
+                "ram": LiquidRAMWidget,
+                "gpu": LiquidGPUWidget,
+                "partitions": LiquidPartitionsWidget,
+                "storage": LiquidStorageWidget,
+                "network_speed": NetworkSpeedWidget,  # Keep original for now
+                "calendar": LiquidCalendarWidget,
+                "clock": LiquidClockWidget,
+                "uptime": LiquidUptimeWidget,
+            }
+        else:
+            # Use original widgets for other themes
+            return {
+                "cpu": CPUWidget,
+                "ram": RAMWidget,
+                "gpu": GPUWidget,
+                "partitions": PartitionsWidget,
+                "storage": StorageWidget,
+                "network_speed": NetworkSpeedWidget,
+                "calendar": CalendarWidget,
+                "clock": ClockWidget,
+                "uptime": UptimeWidget,
+            }
 
     def get_widget_theme_name(self) -> str:
         return self.app_settings.get_widget_theme()
@@ -240,7 +269,14 @@ class OptiPCApp(ctk.CTk):
         title = key.replace("_", " ").title()
         if widget is None or not widget.winfo_exists():
             widget_class = self._widget_builders()[key]
-            widget = widget_class(self)
+            theme_name = self.get_widget_theme_name()
+            
+            # Pass theme_name to Modern widgets
+            if theme_name.startswith("modern_"):
+                widget = widget_class(self, theme_name=theme_name)
+            else:
+                widget = widget_class(self)
+                
             self._set_widget_ref(key, widget)
             self.status_service.info(f"{title} widget opened", toast=show_toast)
             return
@@ -346,6 +382,8 @@ class OptiPCApp(ctk.CTk):
                 "dark": "Dark",
                 "light": "Light",
                 "glass": "Liquid Glass",
+                "modern_dark": "Modern Dark",
+                "modern_light": "Modern Light",
             }.get(self.app_settings.get_widget_theme(), "Dark")
             return SettingsPage(
                 self.content,
@@ -372,16 +410,20 @@ class OptiPCApp(ctk.CTk):
         self.topbar.set_title(page_name)
 
     def change_theme(self, mode: str) -> None:
-        ctk.set_appearance_mode(mode.lower())
-        self.app_settings.set_appearance_mode(mode)
+        # Extract the actual mode from the themed string
+        actual_mode = "Dark" if "🌙" in mode else "Light"
+        ctk.set_appearance_mode(actual_mode.lower())
+        self.app_settings.set_appearance_mode(actual_mode)
         self.topbar.theme_switch.set(mode)
-        self.status_service.success(f"App theme changed to {mode}", toast=True)
+        self.status_service.success(f"App theme changed to {actual_mode}", toast=True)
 
     def change_widget_theme(self, label: str) -> None:
         label_map = {
             "Dark": "dark",
             "Light": "light",
             "Liquid Glass": "glass",
+            "Modern Dark": "modern_dark",
+            "Modern Light": "modern_light",
         }
         theme_name = label_map.get(label, "dark")
         self.app_settings.set_widget_theme(theme_name)

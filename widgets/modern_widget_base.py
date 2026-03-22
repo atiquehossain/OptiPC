@@ -1,36 +1,83 @@
 from __future__ import annotations
 
 import customtkinter as ctk
-
 from config.constants import FONT_SIZES, WIDGET_THEMES
 
 
-class BaseMiniWidget(ctk.CTkToplevel):
-    """Base class for floating desktop widgets.
+class ModernWidgetCard(ctk.CTkFrame):
+    """Modern-style widget card with frosted glass appearance and rounded corners."""
+    
+    def __init__(
+        self,
+        parent,
+        theme_name: str = "apple_dark",
+        corner_radius: int = 24,
+        width: int = 280,
+        height: int = 180,
+        **kwargs
+    ):
+        self.theme_name = theme_name
+        self.theme = WIDGET_THEMES.get(theme_name, WIDGET_THEMES["apple_dark"])
+        
+        # Remove fg_color from kwargs if present to avoid conflicts
+        if "fg_color" in kwargs:
+            kwargs.pop("fg_color")
+            
+        super().__init__(
+            parent,
+            corner_radius=corner_radius,
+            width=width,
+            height=height,
+            fg_color=self.theme["container"],
+            border_width=1,
+            border_color=self.theme.get("border", "transparent"),
+            **kwargs
+        )
+        
+        # Apply frosted glass effect with shadow
+        self._apply_apple_styling()
+    
+    def _apply_apple_styling(self):
+        """Apply Modern-specific styling including shadow effects."""
+        # Note: True shadow and blur effects would require platform-specific APIs
+        # For now, we simulate with border and transparency
+        self.configure(
+            fg_color=self.theme["container"],
+            border_color=self.theme.get("border", "transparent")
+        )
 
-    Design goals:
-    - single instance managed by the main app
-    - draggable from the title area
-    - resizable from every edge and corner
-    - themeable using the shared widget themes
-    - remembers size and position through the parent app
-    """
 
+class ModernMiniWidget(ctk.CTkToplevel):
+    """Modern-style base widget with frosted glass appearance and premium feel."""
+    
     RESIZE_BORDER = 10
     MIN_WIDTH = 160
     MIN_HEIGHT = 160
-
+    
+    # Modern design tokens
+    SPACING_TIGHT = 8
+    SPACING_NORMAL = 12
+    SPACING_SECTION = 20
+    PADDING_HORIZONTAL = 20
+    PADDING_VERTICAL = 16
+    CORNER_RADIUS_LARGE = 24
+    CORNER_RADIUS_MEDIUM = 20
+    CORNER_RADIUS_SMALL = 16
+    
     def __init__(
         self,
         parent,
         title: str,
-        width: int = 280,
-        height: int = 140,
+        width: int = 170,
+        height: int = 170,
         x: int = 40,
         y: int = 40,
         widget_key: str = "",
+        theme_name: str = "apple_dark",
     ) -> None:
         self.widget_key = widget_key
+        self.theme_name = theme_name
+        
         if hasattr(parent, "get_widget_initial_geometry") and widget_key:
             geo = parent.get_widget_initial_geometry(widget_key, x=x, y=y, width=width, height=height)
             x = int(geo["x"])
@@ -59,40 +106,56 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.overrideredirect(True)
         self.attributes("-topmost", True)
 
-        self.current_theme_name = self._get_initial_theme_name()
+        self.current_theme_name = theme_name
         self.theme = WIDGET_THEMES[self.current_theme_name]
 
-        self.container = ctk.CTkFrame(self, corner_radius=24)
-        self.container.pack(fill="both", expand=True, padx=4, pady=4)
+        # Main frosted glass container
+        self.container = ModernWidgetCard(
+            self,
+            theme_name=self.current_theme_name,
+            corner_radius=self.CORNER_RADIUS_LARGE
+        )
+        self.container.pack(fill="both", expand=True, padx=8, pady=8)
 
+        # Title bar with Modern-style spacing
         self.topbar = ctk.CTkFrame(self.container, fg_color="transparent")
-        self.topbar.pack(fill="x", padx=12, pady=(10, 4))
+        self.topbar.pack(fill="x", padx=self.PADDING_HORIZONTAL, pady=(self.PADDING_VERTICAL, self.SPACING_TIGHT))
 
+        # Title with Modern typography
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text=title,
-            font=ctk.CTkFont(size=FONT_SIZES["title"], weight="bold"),
+            font=ctk.CTkFont(size=FONT_SIZES["label"], weight="medium"),
+            text_color=self.theme["muted"]
         )
         self.title_label.pack(side="left")
 
+        # Close button with Modern styling
         self.close_button = ctk.CTkButton(
             self.topbar,
             text="×",
-            width=28,
-            height=28,
-            corner_radius=14,
+            width=24,
+            height=24,
+            corner_radius=12,
+            fg_color=self.theme["button"],
+            hover_color=self.theme["button_hover"],
+            text_color=self.theme["text"],
+            font=ctk.CTkFont(size=16, weight="medium"),
             command=self.hide_widget,
         )
         self.close_button.pack(side="right")
 
+        # Main content area with generous padding
         self.body = ctk.CTkFrame(self.container, fg_color="transparent")
-        self.body.pack(fill="both", expand=True, padx=12, pady=(4, 12))
+        self.body.pack(fill="both", expand=True, padx=self.PADDING_HORIZONTAL, pady=(self.SPACING_TIGHT, self.PADDING_VERTICAL))
 
+        # Drag functionality
         self.topbar.bind("<ButtonPress-1>", self.start_drag)
         self.topbar.bind("<B1-Motion>", self.do_drag)
         self.title_label.bind("<ButtonPress-1>", self.start_drag)
         self.title_label.bind("<B1-Motion>", self.do_drag)
 
+        # Resize functionality
         for widget in (self, self.container, self.body):
             widget.bind("<Motion>", self.on_mouse_move)
             widget.bind("<ButtonPress-1>", self.on_mouse_down)
@@ -102,9 +165,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
 
-        # Apply the shared theme only to the base controls here.
-        # Child controls do not exist yet, so subclasses call apply_theme()
-        # after creating their own widgets.
+        # Apply Modern theme
         self._apply_base_theme()
 
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
@@ -113,19 +174,29 @@ class BaseMiniWidget(ctk.CTkToplevel):
     def _get_initial_theme_name(self) -> str:
         if hasattr(self.master, "get_widget_theme_name"):
             return str(self.master.get_widget_theme_name())
-        return "dark"
+        return "apple_dark"
 
     def _apply_base_theme(self) -> None:
-        self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["dark"])
+        self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["apple_dark"])
         self.configure(fg_color=self.theme["window_bg"])
-        self.attributes("-alpha", self.theme.get("alpha", 1.0))
-        self.container.configure(fg_color="transparent")
-        self.title_label.configure(text_color=self.theme["text"])
-        self.close_button.configure(
-            fg_color=self.theme["button"],
-            hover_color=self.theme["button_hover"],
-            text_color=self.theme["text"],
-        )
+        self.attributes("-alpha", self.theme.get("alpha", 0.98))
+        
+        # Update container styling
+        if hasattr(self, 'container'):
+            self.container.configure(
+                fg_color="transparent",
+                border_color=self.theme.get("border", "transparent")
+            )
+        
+        # Update text colors
+        if hasattr(self, 'title_label'):
+            self.title_label.configure(text_color=self.theme["muted"])
+        if hasattr(self, 'close_button'):
+            self.close_button.configure(
+                fg_color=self.theme["button"],
+                hover_color=self.theme["button_hover"],
+                text_color=self.theme["text"]
+            )
 
     def apply_theme(self, theme_name: str | None = None) -> None:
         if theme_name is not None:
@@ -136,14 +207,68 @@ class BaseMiniWidget(ctk.CTkToplevel):
     def refresh_theme(self) -> None:
         """Override in subclasses to recolor child controls."""
 
-    def create_panel(self, parent):
-        return ctk.CTkFrame(parent, corner_radius=12, fg_color=self.theme["panel"])
-
-    def style_textbox(self, textbox) -> None:
-        textbox.configure(
+    def create_apple_panel(self, parent, corner_radius: int = None) -> ctk.CTkFrame:
+        """Create an Modern-style panel with subtle background."""
+        if corner_radius is None:
+            corner_radius = self.CORNER_RADIUS_MEDIUM
+            
+        return ctk.CTkFrame(
+            parent,
+            corner_radius=corner_radius,
             fg_color=self.theme["panel"],
+            border_width=1,
+            border_color=self.theme.get("border", "transparent")
+        )
+
+    def create_apple_progress_bar(self, parent, width: int = 200, accent_color: str = None) -> ctk.CTkProgressBar:
+        """Create an Modern-style progress bar with rounded corners."""
+        if accent_color is None:
+            accent_color = self.theme["accent"]
+            
+        progress = ctk.CTkProgressBar(
+            parent,
+            width=width,
+            height=8,
+            corner_radius=4,
+            progress_color=accent_color,
+            fg_color=self.theme["progress_track"],
+            border_width=0
+        )
+        progress.set(0)
+        return progress
+
+    def create_apple_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
+        """Create an Modern-style label with proper typography."""
+        return ctk.CTkLabel(
+            parent,
+            text=text,
+            font=ctk.CTkFont(size=FONT_SIZES[size_key], weight=weight),
+            text_color=self.theme.get(color_key, self.theme["text"])
+        )
+
+    def create_apple_metric_label(self, parent, text: str = "0%") -> ctk.CTkLabel:
+        """Create a large Modern-style metric label."""
+        return ctk.CTkLabel(
+            parent,
+            text=text,
+            font=ctk.CTkFont(size=FONT_SIZES["hero"], weight="semibold"),
+            text_color=self.theme["text"]
+        )
+
+    def create_apple_button(self, parent, text: str, command=None, width: int = None, height: int = 30) -> ctk.CTkButton:
+        """Create an Modern-style button with subtle styling."""
+        return ctk.CTkButton(
+            parent,
+            text=text,
+            command=command,
+            width=width,
+            height=height,
+            corner_radius=self.CORNER_RADIUS_SMALL,
+            fg_color=self.theme["button"],
+            hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            border_width=0,
+            font=ctk.CTkFont(size=FONT_SIZES["body"], weight="medium"),
+            border_width=0
         )
 
     def hide_widget(self) -> None:
