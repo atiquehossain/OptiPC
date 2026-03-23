@@ -7,6 +7,7 @@ from tkinter import PhotoImage
 import customtkinter as ctk
 
 from config.constants import APP_NAME, THEMES
+from pages.about_developer_page import AboutDeveloperPage
 from pages.cleanup_page import CleanupPage
 from pages.dashboard_page import DashboardPage
 from pages.devices_page import DevicesPage
@@ -381,6 +382,8 @@ class OptiPCApp(ctk.CTk):
             return WallpaperPage(self.content, self.logger, self.status_service, self.system_service, self.action_service, self.wallpaper_service, self.report_dir)
         if page_name == "Reports":
             return ReportsPage(self.content, self.logger, self.status_service, self.system_service, self.action_service, self.report_dir)
+        if page_name == "About Developer":
+            return AboutDeveloperPage(self.content, self.logger, self.status_service, self.system_service, self.action_service)
         if page_name == "Settings":
             widget_theme_label = {
                 "dark": "Dark",
@@ -419,6 +422,7 @@ class OptiPCApp(ctk.CTk):
         ctk.set_appearance_mode(actual_mode.lower())
         self.app_settings.set_appearance_mode(actual_mode)
         self.topbar.theme_switch.set(mode)
+        self.sidebar.update_theme(actual_mode.lower())
         self.status_service.success(f"App theme changed to {actual_mode}", toast=True)
 
     def change_widget_theme(self, label: str) -> None:

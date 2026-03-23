@@ -12,6 +12,7 @@ class CleanupService:
     def _remove_children(self, folder: Path, on_output: Callable[[str], None]) -> tuple[int, int]:
         removed = 0
         failed = 0
+        skipped = 0
 
         if not str(folder) or not folder.exists():
             on_output(f"Skipping missing folder: {folder}")
@@ -20,17 +21,29 @@ class CleanupService:
         on_output(f"Scanning: {folder}")
 
         for item in folder.iterdir():
+            # Skip system and critical folders
+            if item.name.lower() in ['diagnostics', 'microsoft', 'windows']:
+                skipped += 1
+                continue
+                
             try:
                 if item.is_dir():
-                    shutil.rmtree(item)
+                    shutil.rmtree(item, ignore_errors=False)
                 else:
                     item.unlink(missing_ok=True)
                 removed += 1
-                on_output(f"Removed: {item}")
+                on_output(f"Removed: {item.name}")
+            except (PermissionError, OSError) as exc:
+                # File is in use by another process - this is normal
+                failed += 1
+                on_output(f"Skipped (in use): {item.name}")
             except Exception as exc:
                 failed += 1
-                on_output(f"Failed: {item} ({exc})")
+                on_output(f"Failed: {item.name} ({exc})")
 
+        if skipped > 0:
+            on_output(f"Skipped {skipped} system folders for safety")
+            
         return removed, failed
 
     def _remove_pattern(self, folder: Path, pattern: str, on_output: Callable[[str], None]) -> tuple[int, int]:
@@ -47,10 +60,14 @@ class CleanupService:
             try:
                 item.unlink(missing_ok=True)
                 removed += 1
-                on_output(f"Removed: {item}")
+                on_output(f"Removed: {item.name}")
+            except (PermissionError, OSError) as exc:
+                # File is in use by another process - this is normal
+                failed += 1
+                on_output(f"Skipped (in use): {item.name}")
             except Exception as exc:
                 failed += 1
-                on_output(f"Failed: {item} ({exc})")
+                on_output(f"Failed: {item.name} ({exc})")
 
         return removed, failed
 
@@ -83,22 +100,34 @@ class CleanupService:
         ]
 
         for folder in folders:
-            removed, failed = self._remove_children(folder, on_output)
-            total_removed += removed
-            total_failed += failed
+            try:
+                removed, failed = self._remove_children(folder, on_output)
+                total_removed += removed
+                total_failed += failed
+            except (PermissionError, OSError) as e:
+                on_output(f"Access denied to {folder} - skipping (this is normal)")
+                total_failed += 1
 
         temp_dir = Path(os.getenv("TEMP", ""))
         windows_temp = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "Temp"
         for folder in [temp_dir, windows_temp]:
-            for pattern in ("*.log", "*.tmp"):
-                removed, failed = self._remove_pattern(folder, pattern, on_output)
-                total_removed += removed
-                total_failed += failed
+            try:
+                for pattern in ("*.log", "*.tmp"):
+                    removed, failed = self._remove_pattern(folder, pattern, on_output)
+                    total_removed += removed
+                    total_failed += failed
+            except (PermissionError, OSError) as e:
+                on_output(f"Access denied to {folder} - skipping (this is normal)")
+                total_failed += 1
 
         thumb_dir = Path(os.getenv("LOCALAPPDATA", "")) / "Microsoft" / "Windows" / "Explorer"
-        removed, failed = self._remove_pattern(thumb_dir, "thumbcache_*.db", on_output)
-        total_removed += removed
-        total_failed += failed
+        try:
+            removed, failed = self._remove_pattern(thumb_dir, "thumbcache_*.db", on_output)
+            total_removed += removed
+            total_failed += failed
+        except (PermissionError, OSError) as e:
+            on_output(f"Access denied to thumbnail cache - skipping")
+            total_failed += 1
 
         on_output("Deep cleanup finished.")
         return {"removed": total_removed, "failed": total_failed}

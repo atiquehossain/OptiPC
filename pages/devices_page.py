@@ -33,31 +33,74 @@ class DevicesPage(BasePage):
         self.status_service.info("Devices page ready", toast=False)
 
     def _open_sound_settings(self) -> None:
-        self.logger.write("Opening Sound Settings...")
-        self.action_service.open_sound_settings()
-        self.status_service.info("Opened Sound Settings", toast=False)
+        try:
+            self.logger.write("Opening Sound Settings...")
+            success = self.action_service.open_sound_settings()
+            if success:
+                self.status_service.success("Sound Settings opened", toast=True)
+            else:
+                self.status_service.error("Failed to open Sound Settings", toast=True)
+        except Exception as e:
+            self.logger.write(f"Failed to open Sound Settings: {e}")
+            self.status_service.error("Failed to open Sound Settings", toast=True)
 
     def _open_sound_panel(self) -> None:
-        self.logger.write("Opening Sound Control Panel...")
-        self.action_service.open_sound_panel()
-        self.status_service.info("Opened Sound Control Panel", toast=False)
+        try:
+            self.logger.write("Opening Sound Control Panel...")
+            success = self.action_service.open_sound_panel()
+            if success:
+                self.status_service.success("Sound Control Panel opened", toast=True)
+            else:
+                self.status_service.error("Failed to open Sound Control Panel", toast=True)
+        except Exception as e:
+            self.logger.write(f"Failed to open Sound Control Panel: {e}")
+            self.status_service.error("Failed to open Sound Control Panel", toast=True)
 
     def _list_cameras(self) -> None:
-        self.logger.write("Listing cameras...")
-        self.logger.write(self.action_service.list_cameras())
-        self.status_service.info("Camera list updated", toast=False)
+        try:
+            self.logger.write("Listing cameras...")
+            cameras = self.action_service.list_cameras()
+            self.logger.write(cameras)
+            if cameras and cameras.strip():
+                self.status_service.success("Camera list updated", toast=True)
+            else:
+                self.status_service.warning("No cameras found", toast=True)
+        except Exception as e:
+            self.logger.write(f"Failed to list cameras: {e}")
+            self.status_service.error("Failed to list cameras", toast=True)
 
     def _open_camera_settings(self) -> None:
-        self.logger.write("Opening Camera Settings...")
-        self.action_service.open_camera_settings()
-        self.status_service.info("Opened Camera Settings", toast=False)
+        try:
+            self.logger.write("Opening Camera Settings...")
+            success = self.action_service.open_camera_settings()
+            if success:
+                self.status_service.success("Camera Settings opened", toast=True)
+            else:
+                self.status_service.error("Failed to open Camera Settings", toast=True)
+        except Exception as e:
+            self.logger.write(f"Failed to open Camera Settings: {e}")
+            self.status_service.error("Failed to open Camera Settings", toast=True)
 
     def _open_privacy_settings(self) -> None:
-        self.logger.write("Opening Privacy Settings...")
-        self.action_service.open_privacy_settings()
-        self.status_service.info("Opened Privacy Settings", toast=False)
+        try:
+            self.logger.write("Opening Privacy Settings...")
+            success = self.action_service.open_privacy_settings()
+            if success:
+                self.status_service.success("Privacy Settings opened", toast=True)
+            else:
+                self.status_service.error("Failed to open Privacy Settings", toast=True)
+        except Exception as e:
+            self.logger.write(f"Failed to open Privacy Settings: {e}")
+            self.status_service.error("Failed to open Privacy Settings", toast=True)
 
     def _open_location_settings(self) -> None:
-        self.logger.write("Opening Location Settings...")
-        self.action_service.open_location_settings()
-        self.status_service.info("Opened Location Settings", toast=False)
+        try:
+            self.logger.write("Opening Location Settings...")
+            success = self.action_service.open_location_settings()
+            if success:
+                self.status_service.success("Location Settings opened", toast=True)
+            else:
+                self.status_service.error("Failed to open Location Settings", toast=True)
+        except Exception as e:
+            self.logger.write(f"Failed to open Location Settings: {e}")
+            self.status_service.error("Failed to open Location Settings", toast=True)

@@ -35,5 +35,6 @@ exe = EXE(
     target_arch='x86_64',
     codesign_identity=None,
     entitlements_file=None,
+    uac_admin=True,
     icon=['assets\\optipc_icon.ico'],
 )

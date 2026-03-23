@@ -105,3 +105,21 @@ class Sidebar(ctk.CTkFrame):
                     hover_color=THEMES["light"]["sidebar_button_hover"],
                     border_color=THEMES["light"]["border"]
                 )
+
+    def update_theme(self, appearance: str) -> None:
+        """Update sidebar theme based on appearance"""
+        is_dark = appearance == "dark"
+        
+        # Update all buttons
+        for name, button in self.buttons.items():
+            button.configure(
+                fg_color=(THEMES["light"]["sidebar_button_bg"], THEMES["dark"]["sidebar_button_bg"])[is_dark],
+                text_color=(THEMES["light"]["sidebar_button_text"], THEMES["dark"]["sidebar_button_text"])[is_dark],
+                hover_color=(THEMES["light"]["sidebar_button_hover"], THEMES["dark"]["sidebar_button_hover"])[is_dark],
+                border_color=(THEMES["light"]["border"], THEMES["dark"]["border"])[is_dark]
+            )
+        
+        # Update sidebar background
+        self.configure(
+            fg_color=(THEMES["light"]["sidebar_bg"], THEMES["dark"]["sidebar_bg"])[is_dark]
+        )

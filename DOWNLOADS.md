@@ -10,6 +10,7 @@ Choose the version that matches your Windows system:
 ✅ **Compatible with:** Windows 10, Windows 11 (64-bit)
 ✅ **Best for:** Most modern computers and laptops
 ✅ **Recommended:** 99% of users should choose this version
+🔐 **Administrator Rights:** Built-in - automatic UAC prompt
 
 ---
 
@@ -19,6 +20,7 @@ Choose the version that matches your Windows system:
 ✅ **Compatible with:** Windows 7, Windows 8.1, Windows 10, Windows 11 (32-bit)
 ✅ **Best for:** Very old computers with 32-bit Windows
 ✅ **Use if:** Your computer has less than 4GB RAM
+🔐 **Administrator Rights:** Built-in - automatic UAC prompt
 
 ---
 
@@ -28,6 +30,7 @@ Choose the version that matches your Windows system:
 ✅ **Compatible with:** Windows 10, Windows 11 on ARM64
 ✅ **Best for:** Surface Pro X, Surface Pro 9+, ARM-based laptops
 ✅ **Use if:** Your device uses ARM processor (check in Settings → About)
+🔐 **Administrator Rights:** Built-in - automatic UAC prompt
 
 ---
 
@@ -44,8 +47,23 @@ Click the download link that matches your computer type above.
 
 ### **Step 3: Run**
 1. Double-click `OptiPC_[version].exe`
-2. If Windows shows a security warning, click "More info" → "Run anyway"
+2. **UAC Prompt:** Windows will ask for administrator permission - click "Yes"
 3. **Enjoy OptiPC!** No installation needed!
+
+### **⚠️ Administrator Access Required**
+
+OptiPC needs administrator rights to work properly:
+
+**Why Admin Rights Are Needed:**
+- 🧹 **System Cleanup:** Clean temporary files and system junk
+- 🔧 **System Repair:** Run SFC, DISM, and CHKDSK tools
+- 📊 **Hardware Monitoring:** Access CPU, RAM, and GPU information
+- ⚙️ **System Settings:** Modify Windows optimization settings
+
+**This is Normal and Safe:**
+- The UAC (User Account Control) prompt is Windows security feature
+- Click "Yes" when asked about allowing app to make changes
+- OptiPC is 100% safe and open source software
 
 ---
 
@@ -69,7 +87,8 @@ OptiPC_[version]_Release/
 - **100% Safe:** OptiPC is open source and scanned for viruses
 - **No Malware:** Contains no spyware, adware, or harmful code
 - **Privacy Respected:** Doesn't collect or send any personal data
-- **Windows SmartScreen:** May show warning for new apps - this is normal
+- **UAC Prompt:** Windows User Account Control is normal - click "Yes" to continue
+- **Admin Rights Needed:** Required for system cleanup and repair functions
 
 ---
 

@@ -205,6 +205,7 @@ NAVIGATION_ICONS = {
     "Wallpaper": "🖼️",
     "Reports": "📊",
     "Settings": "⚙️",
+    "About Developer": "👨‍💻",
 }
 
 # Dashboard Icons

@@ -107,3 +107,18 @@ class SettingsPage(BasePage):
     def _open_startup_apps(self) -> None:
         self.action_service.open_target("ms-settings:startupapps")
         self.status_service.info("Opened Startup Apps Settings", toast=False)
+
+    def _make_link_button(self, parent, text: str, url: str) -> None:
+        """Create a button that opens a URL"""
+        import webbrowser
+        button = ctk.CTkButton(
+            parent,
+            text=text,
+            command=lambda: webbrowser.open(url),
+            fg_color="transparent",
+            text_color=("gray10", "gray90"),
+            hover_color=("gray70", "gray30"),
+            anchor="w",
+            height=32
+        )
+        return button

@@ -59,8 +59,12 @@ class MultiArchBuilder:
         for dir_name in dirs_to_clean:
             dir_path = self.current_dir / dir_name
             if dir_path.exists():
-                shutil.rmtree(dir_path)
-                print(f"✓ Cleaned {dir_name} directory")
+                try:
+                    shutil.rmtree(dir_path)
+                    print(f"✓ Cleaned {dir_name} directory")
+                except PermissionError:
+                    print(f"⚠ Could not clean {dir_name} directory - files may be in use")
+                    print(f"  Please close any running OptiPC instances and try again")
     
     def build_for_architecture(self, arch_key):
         """Build executable for specific architecture"""
@@ -93,6 +97,7 @@ class MultiArchBuilder:
             "--hidden-import=shutil",
             "--hidden-import=pathlib",
             "--hidden-import=datetime",
+            "--uac-admin",  # Require administrator privileges
             "main.py"
         ]
         
@@ -176,8 +181,8 @@ Troubleshooting:
     
     def build_all_architectures(self):
         """Build executables for all architectures"""
-        print("🚀 OptiPC Multi-Architecture Builder")
-        print("=" * 50)
+        print("🚀 OptiPC Multi-Architecture Builder (With Admin Rights)")
+        print("=" * 60)
         
         # Install PyInstaller
         if not self.install_pyinstaller():
@@ -189,13 +194,14 @@ Troubleshooting:
         # Build for each architecture
         successful_builds = []
         for arch_key in self.architectures.keys():
+            print(f"\n🔨 Building {arch_key} with administrator privileges...")
             if self.build_for_architecture(arch_key):
                 if self.create_release_package(arch_key):
                     successful_builds.append(arch_key)
         
         # Summary
-        print("\n" + "=" * 50)
-        print("📊 Build Summary:")
+        print("\n" + "=" * 60)
+        print("📊 Build Summary (All with Admin Rights):")
         for arch_key in self.architectures.keys():
             status = "✓ Success" if arch_key in successful_builds else "✗ Failed"
             arch_config = self.architectures[arch_key]
@@ -206,7 +212,8 @@ Troubleshooting:
             print("\n📋 Distribution Instructions:")
             print("1. Share the ZIP files for each architecture")
             print("2. Users extract and run the appropriate executable")
-            print("3. No installation required - fully portable")
+            print("3. All versions will automatically prompt for admin rights")
+            print("4. No installation required - fully portable")
         
         return len(successful_builds) > 0
     

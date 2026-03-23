@@ -60,19 +60,43 @@ class SystemService:
 
     @staticmethod
     def quick_cleanup_temp() -> tuple[int, int]:
+        """Clean temporary files safely, skipping locked files and system folders"""
         temp_path = os.getenv("TEMP")
         if not temp_path:
             return 0, 1
 
         removed = 0
         failed = 0
-        for item in Path(temp_path).glob("*"):
-            try:
-                if item.is_dir():
-                    shutil.rmtree(item)
-                else:
-                    item.unlink(missing_ok=True)
-                removed += 1
-            except Exception:
-                failed += 1
+        skipped_system = 0
+        
+        try:
+            for item in Path(temp_path).glob("*"):
+                # Skip system and critical folders
+                if item.name.lower() in ['diagnostics', 'microsoft', 'windows']:
+                    skipped_system += 1
+                    continue
+                    
+                # Skip files that might be in use by other processes
+                try:
+                    if item.is_dir():
+                        # Try to remove directory, but skip if it contains locked files
+                        shutil.rmtree(item, ignore_errors=False)
+                    else:
+                        # Try to remove file, but skip if in use
+                        item.unlink(missing_ok=True)
+                    removed += 1
+                    
+                except (PermissionError, OSError) as e:
+                    # File is in use by another process - this is normal
+                    failed += 1
+                    continue
+                except Exception:
+                    # Other errors
+                    failed += 1
+                    continue
+                    
+        except (PermissionError, OSError) as e:
+            # Can't access temp folder itself
+            return 0, 1
+            
         return removed, failed

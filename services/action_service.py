@@ -18,32 +18,37 @@ class ActionService:
     """Windows actions, reports, and selected elevated commands."""
 
     @staticmethod
-    def open_target(target: str) -> None:
-        subprocess.Popen(["cmd", "/c", "start", "", target], shell=False)
+    def open_target(target: str) -> bool:
+        """Open target and return success status"""
+        try:
+            subprocess.Popen(["cmd", "/c", "start", "", target], shell=False)
+            return True
+        except Exception:
+            return False
 
-    def open_windows_settings(self) -> None:
-        self.open_target("ms-settings:")
+    def open_windows_settings(self) -> bool:
+        return self.open_target("ms-settings:")
 
-    def open_disk_cleanup(self) -> None:
-        self.open_target("cleanmgr")
+    def open_disk_cleanup(self) -> bool:
+        return self.open_target("cleanmgr")
 
-    def open_sound_settings(self) -> None:
-        self.open_target("ms-settings:sound")
+    def open_sound_settings(self) -> bool:
+        return self.open_target("ms-settings:sound")
 
-    def open_camera_settings(self) -> None:
-        self.open_target("ms-settings:camera")
+    def open_camera_settings(self) -> bool:
+        return self.open_target("ms-settings:camera")
 
-    def open_privacy_settings(self) -> None:
-        self.open_target("ms-settings:privacy")
+    def open_privacy_settings(self) -> bool:
+        return self.open_target("ms-settings:privacy")
 
-    def open_location_settings(self) -> None:
-        self.open_target("ms-settings:privacy-location")
+    def open_location_settings(self) -> bool:
+        return self.open_target("ms-settings:privacy-location")
 
-    def open_sound_panel(self) -> None:
-        self.open_target("mmsys.cpl")
+    def open_sound_panel(self) -> bool:
+        return self.open_target("mmsys.cpl")
 
-    def open_report_folder(self, folder: Path) -> None:
-        self.open_target(str(folder))
+    def open_report_folder(self, folder: Path) -> bool:
+        return self.open_target(str(folder))
 
     @staticmethod
     def run_command_stream(command: Iterable[str], on_output: Callable[[str], None] | None = None) -> int:

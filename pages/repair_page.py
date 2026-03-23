@@ -36,5 +36,17 @@ class RepairPage(BasePage):
         self.status_service.info("Repair page ready", toast=False)
 
     def _run_admin(self, command: str) -> None:
-        self.logger.write(self.action_service.run_elevated_command(command))
-        self.status_service.info("Admin command launched", toast=True)
+        try:
+            self.logger.write(f"Executing: {command}")
+            result = self.action_service.run_elevated_command(command)
+            self.logger.write(result)
+            
+            # Check if command was successful based on common patterns
+            if "successfully" in result.lower() or "found no integrity violations" in result.lower() or "completed" in result.lower():
+                self.status_service.success(f"Repair command completed: {command.split()[0].upper()}", toast=True)
+            else:
+                self.status_service.info(f"Repair command executed: {command.split()[0].upper()}", toast=True)
+                
+        except Exception as e:
+            self.logger.write(f"Repair command failed: {e}")
+            self.status_service.error(f"Repair command failed: {command.split()[0].upper()}", toast=True)

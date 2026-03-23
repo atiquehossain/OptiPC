@@ -1,0 +1,23 @@
+OptiPC - 32-bit (x86) Release
+For older 32-bit Windows systems
+
+Installation:
+1. Extract all files to a folder
+2. Run OptiPC_x86.exe
+3. No installation required - portable application
+
+System Requirements:
+- Windows 10 or higher
+- For older 32-bit Windows systems
+
+File Information:
+- Executable: OptiPC_x86.exe
+- Size: 19.0 MB
+- Built: 2026-03-23 23:06:55
+
+Troubleshooting:
+- If antivirus blocks the executable, add it to exceptions
+- If the app doesn't start, run as administrator
+- For more help, see TROUBLESHOOTING_FRIEND.md
+
+© 2024 OptiPC
