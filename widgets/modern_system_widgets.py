@@ -4,6 +4,12 @@ import psutil
 from typing import List
 import customtkinter as ctk
 
+from widgets.calendar_responsive import (
+    apply_calendar_footer_visibility,
+    apply_calendar_grid_layout,
+    calendar_day_font,
+    install_calendar_grid,
+)
 from widgets.modern_widget_base import ModernMiniWidget
 from config.constants import FONT_SIZES
 
@@ -503,6 +509,7 @@ class ModernCalendarWidget(ModernMiniWidget):
     def create_calendar_ui(self):
         # Month/Year navigation frame
         nav_frame = ctk.CTkFrame(self.body, fg_color="transparent")
+        self.nav_frame = nav_frame
         nav_frame.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
         
         # Previous month button
@@ -551,6 +558,7 @@ class ModernCalendarWidget(ModernMiniWidget):
             corner_radius=self.CORNER_RADIUS_MEDIUM
         )
         self.calendar_frame.pack(fill="both", expand=True, pady=(self.SPACING_TIGHT, self.SPACING_NORMAL))
+        install_calendar_grid(self.calendar_frame)
         
         # Day headers
         self.day_labels = []
@@ -563,7 +571,7 @@ class ModernCalendarWidget(ModernMiniWidget):
                 weight="medium",
                 color_key="muted"
             )
-            label.grid(row=0, column=i, padx=2, pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
+            label.grid(row=0, column=i, padx=0, pady=0, sticky="nsew")
             self.day_labels.append(label)
         
         # Day buttons (6 weeks x 7 days)
@@ -575,10 +583,10 @@ class ModernCalendarWidget(ModernMiniWidget):
                     self.calendar_frame,
                     "",
                     command=lambda w=week, d=day: self.day_clicked(w, d),
-                    width=40,
-                    height=36
+                    width=1,
+                    height=1
                 )
-                btn.grid(row=week + 1, column=day, padx=2, pady=1)
+                btn.grid(row=week + 1, column=day, padx=0, pady=0, sticky="nsew")
                 week_buttons.append(btn)
             self.day_buttons.append(week_buttons)
         
@@ -590,6 +598,30 @@ class ModernCalendarWidget(ModernMiniWidget):
             color_key="muted"
         )
         self.datetime_label.pack(pady=(self.SPACING_TIGHT, 0))
+        self._layout_calendar()
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        self._layout_calendar()
+
+    def _layout_calendar(self) -> None:
+        if not hasattr(self, "calendar_frame"):
+            return
+        try:
+            compact = self.winfo_height() < 300
+            nav_pad_y = (4, 3) if compact else (self.SPACING_NORMAL, self.SPACING_TIGHT)
+            grid_pad_y = (3, 6) if compact else (self.SPACING_TIGHT, self.SPACING_NORMAL)
+            self.nav_frame.pack_configure(pady=nav_pad_y)
+            self.calendar_frame.pack_configure(pady=grid_pad_y)
+            button_size = 24 if compact else 32
+            self.prev_btn.configure(width=button_size, height=button_size)
+            self.next_btn.configure(width=button_size, height=button_size)
+            self.today_btn.configure(width=56 if compact else 70, height=button_size)
+            self.month_label.configure(wraplength=max(74, self.winfo_width() - 168))
+        except Exception:
+            pass
+        apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(self.SPACING_TIGHT, 0))
+        apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
 
     def refresh_theme(self) -> None:
         if hasattr(self, 'month_label'):
@@ -637,6 +669,7 @@ class ModernCalendarWidget(ModernMiniWidget):
         # Update month/year label
         month_name = calendar.month_name[self.display_month]
         self.month_label.configure(text=f"{month_name} {self.display_year}")
+        self._layout_calendar()
         
         # Get calendar data
         cal = calendar.monthcalendar(self.display_year, self.display_month)
@@ -664,21 +697,21 @@ class ModernCalendarWidget(ModernMiniWidget):
                             fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
                             hover_color=self.theme["button_hover"],
                             text_color="white",
-                            font=ctk.CTkFont(size=FONT_SIZES["body"], weight="bold")
+                            font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif is_weekend:
                         btn.configure(
                             fg_color=self.theme["panel"],
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme.get("calendar_accent", self.theme["accent"]),
-                            font=ctk.CTkFont(size=FONT_SIZES["body"])
+                            font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                     else:
                         btn.configure(
                             fg_color=self.theme["panel"],
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme["text"],
-                            font=ctk.CTkFont(size=FONT_SIZES["body"])
+                            font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                 else:
                     btn.configure(

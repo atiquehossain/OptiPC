@@ -4,6 +4,12 @@ import psutil
 from typing import List
 import customtkinter as ctk
 
+from widgets.calendar_responsive import (
+    apply_calendar_footer_visibility,
+    apply_calendar_grid_layout,
+    calendar_day_font,
+    install_calendar_grid,
+)
 from widgets.liquid_glass_widget import LiquidGlassWidget
 from config.constants import FONT_SIZES
 
@@ -503,6 +509,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
     def create_calendar_ui(self):
         # Month/Year navigation frame
         nav_frame = ctk.CTkFrame(self.body, fg_color="transparent")
+        self.nav_frame = nav_frame
         nav_frame.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
         
         # Previous month button
@@ -551,6 +558,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             corner_radius=self.CORNER_RADIUS_MEDIUM
         )
         self.calendar_frame.pack(fill="both", expand=True, pady=(self.SPACING_TIGHT, self.SPACING_NORMAL))
+        install_calendar_grid(self.calendar_frame)
         
         # Day headers - macOS style (S M T W T F S)
         self.day_labels = []
@@ -563,7 +571,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                 weight="medium",
                 color_key="muted"
             )
-            label.grid(row=0, column=i, padx=1, pady=(self.SPACING_NORMAL, 2))
+            label.grid(row=0, column=i, padx=0, pady=0, sticky="nsew")
             self.day_labels.append(label)
         
         # Day buttons - responsive sizing
@@ -576,11 +584,11 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                     self.calendar_frame,
                     "",
                     command=lambda w=week, d=day: self.day_clicked(w, d),
-                    width=32,
-                    height=28,
-                    corner_radius=14  # More rounded for macOS look
+                    width=1,
+                    height=1,
+                    corner_radius=8
                 )
-                btn.grid(row=week + 1, column=day, padx=1, pady=1)
+                btn.grid(row=week + 1, column=day, padx=0, pady=0, sticky="nsew")
                 week_buttons.append(btn)
             self.day_buttons.append(week_buttons)
         
@@ -592,6 +600,30 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             color_key="muted"
         )
         self.datetime_label.pack(pady=(self.SPACING_TIGHT, 0))
+        self._layout_calendar()
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        self._layout_calendar()
+
+    def _layout_calendar(self) -> None:
+        if not hasattr(self, "calendar_frame"):
+            return
+        try:
+            compact = self.winfo_height() < 300
+            nav_pad_y = (4, 3) if compact else (self.SPACING_NORMAL, self.SPACING_TIGHT)
+            grid_pad_y = (3, 6) if compact else (self.SPACING_TIGHT, self.SPACING_NORMAL)
+            self.nav_frame.pack_configure(pady=nav_pad_y)
+            self.calendar_frame.pack_configure(pady=grid_pad_y)
+            button_size = 24 if compact else 28
+            self.prev_btn.configure(width=button_size, height=button_size)
+            self.next_btn.configure(width=button_size, height=button_size)
+            self.today_btn.configure(width=56 if compact else 60, height=button_size)
+            self.month_label.configure(wraplength=max(74, self.winfo_width() - 160))
+        except Exception:
+            pass
+        apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(self.SPACING_TIGHT, 0))
+        apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
 
     def refresh_theme(self) -> None:
         if hasattr(self, 'month_label'):
@@ -639,6 +671,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
         # Update month/year label
         month_name = calendar.month_name[self.display_month]
         self.month_label.configure(text=f"{month_name[:3]} {self.display_year}")  # Short month name like macOS
+        self._layout_calendar()
         
         # Get calendar data
         cal = calendar.monthcalendar(self.display_year, self.display_month)
@@ -674,7 +707,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
                             hover_color=self.theme["button_hover"],
                             text_color="white",
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="bold")
+                            font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif is_weekend:
                         # Weekend gets subtle red text
@@ -682,7 +715,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color="transparent",
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme.get("calendar_accent", self.theme["accent"]),
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="bold")
+                            font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif not is_current_month:
                         # Other month days get very muted text
@@ -690,7 +723,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color="transparent",
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme.get("muted"),
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="normal")
+                            font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                     else:
                         # Regular weekdays get normal text
@@ -698,7 +731,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color="transparent",
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme["text"],
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="bold")
+                            font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                 else:
                     # Empty cells

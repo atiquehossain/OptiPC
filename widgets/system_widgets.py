@@ -13,6 +13,12 @@ try:
 except Exception:
     GPUtil = None
 
+from widgets.calendar_responsive import (
+    apply_calendar_footer_visibility,
+    apply_calendar_grid_layout,
+    calendar_day_font,
+    install_calendar_grid,
+)
 from widgets.base_mini_widget import BaseMiniWidget
 from config.constants import FONT_SIZES
 
@@ -260,6 +266,7 @@ class CalendarWidget(BaseMiniWidget):
     def create_calendar_ui(self):
         # Month/Year navigation
         nav_frame = ctk.CTkFrame(self.body, fg_color="transparent")
+        self.nav_frame = nav_frame
         nav_frame.pack(fill="x", pady=(8, 4))
         
         # Previous month button
@@ -304,6 +311,7 @@ class CalendarWidget(BaseMiniWidget):
         # Calendar grid frame
         self.calendar_frame = ctk.CTkFrame(self.body, corner_radius=12)
         self.calendar_frame.pack(fill="both", expand=True, padx=4, pady=(8, 12))
+        install_calendar_grid(self.calendar_frame)
         
         # Day headers
         self.day_labels = []
@@ -315,8 +323,8 @@ class CalendarWidget(BaseMiniWidget):
                 "small",
                 "bold"
             )
-            label.configure(width=40, height=25)
-            label.grid(row=0, column=i, padx=2, pady=2)
+            label.configure(width=1, height=1)
+            label.grid(row=0, column=i, padx=0, pady=0, sticky="nsew")
             self.day_labels.append(label)
         
         # Day buttons (6 weeks x 7 days)
@@ -327,14 +335,14 @@ class CalendarWidget(BaseMiniWidget):
                 btn = ctk.CTkButton(
                     self.calendar_frame,
                     text="",
-                    width=40,
-                    height=35,
+                    width=1,
+                    height=1,
                     corner_radius=8,
                     font=ctk.CTkFont(size=self.get_responsive_font_size("body")),
                     text_color="#ffffff",  # Force white text initially
                     command=lambda w=week, d=day: self.day_clicked(w, d)
                 )
-                btn.grid(row=week + 1, column=day, padx=2, pady=2)
+                btn.grid(row=week + 1, column=day, padx=0, pady=0, sticky="nsew")
                 week_buttons.append(btn)
             self.day_buttons.append(week_buttons)
         
@@ -345,6 +353,28 @@ class CalendarWidget(BaseMiniWidget):
             "small"
         )
         self.datetime_label.pack(pady=(4, 8))
+        self._layout_calendar()
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        self._layout_calendar()
+
+    def _layout_calendar(self) -> None:
+        if not hasattr(self, "calendar_frame"):
+            return
+        try:
+            compact = self.winfo_height() < 300
+            self.nav_frame.pack_configure(pady=(4, 3) if compact else (8, 4))
+            self.calendar_frame.pack_configure(padx=4, pady=(3, 6) if compact else (8, 12))
+            button_size = 24 if compact else 30
+            self.prev_btn.configure(width=button_size, height=button_size)
+            self.next_btn.configure(width=button_size, height=button_size)
+            self.today_btn.configure(width=56 if compact else 60, height=button_size)
+            self.month_label.configure(wraplength=max(74, self.winfo_width() - 160))
+        except Exception:
+            pass
+        apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(4, 8))
+        apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
 
     def refresh_theme(self) -> None:
         if hasattr(self, 'month_label'):
@@ -380,6 +410,7 @@ class CalendarWidget(BaseMiniWidget):
         # Update month/year label
         month_name = calendar.month_name[self.display_month]
         self.month_label.configure(text=f"{month_name} {self.display_year}")
+        self._layout_calendar()
         
         # Get calendar data
         cal = calendar.monthcalendar(self.display_year, self.display_month)
@@ -407,21 +438,21 @@ class CalendarWidget(BaseMiniWidget):
                             fg_color=self.theme.get("accent", "#1f6aa5"),
                             hover_color=self.theme.get("button_hover", "#343638"),
                             text_color="white",
-                            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="bold")
+                            font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif is_weekend:
                         btn.configure(
                             fg_color=self.theme.get("panel", "#212121"),
                             hover_color=self.theme.get("button_hover", "#343638"),
                             text_color=self.theme.get("accent", "#1f6aa5"),
-                            font=ctk.CTkFont(size=self.get_responsive_font_size("body"))
+                            font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                     else:
                         btn.configure(
                             fg_color=self.theme.get("panel", "#212121"),
                             hover_color=self.theme.get("button_hover", "#343638"),
                             text_color=self.theme.get("text", "#ffffff"),
-                            font=ctk.CTkFont(size=self.get_responsive_font_size("body"))
+                            font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                 else:
                     btn.configure(
