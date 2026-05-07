@@ -448,6 +448,73 @@ def test_widget_material_modes():
         return False
 
 
+def test_app_theme_change_refreshes_widgets():
+    """Test app Light/Dark changes also refresh already-open floating widgets."""
+    try:
+        import app as app_module
+
+        class FakeSettings:
+            def __init__(self):
+                self.mode = ""
+
+            def set_appearance_mode(self, mode):
+                self.mode = mode
+
+        class FakeSwitch:
+            def __init__(self):
+                self.value = ""
+
+            def set(self, value):
+                self.value = value
+
+        class FakeTopbar:
+            def __init__(self):
+                self.theme_switch = FakeSwitch()
+
+        class FakeSidebar:
+            def __init__(self):
+                self.mode = ""
+
+            def update_theme(self, mode):
+                self.mode = mode
+
+        class FakeStatus:
+            def success(self, *_args, **_kwargs):
+                pass
+
+        class FakeApp:
+            def __init__(self):
+                self.app_settings = FakeSettings()
+                self.topbar = FakeTopbar()
+                self.sidebar = FakeSidebar()
+                self.status_service = FakeStatus()
+                self.refresh_count = 0
+
+            def apply_widget_theme_to_open_widgets(self):
+                self.refresh_count += 1
+
+        fake_app = FakeApp()
+        original_set_appearance_mode = app_module.ctk.set_appearance_mode
+        app_module.ctk.set_appearance_mode = lambda _mode: None
+        try:
+            app_module.OptiPCApp.change_theme(fake_app, "Light")
+        finally:
+            app_module.ctk.set_appearance_mode = original_set_appearance_mode
+
+        if fake_app.app_settings.mode != "Light":
+            print("FAIL: App theme did not store Light mode")
+            return False
+        if fake_app.refresh_count != 1:
+            print("FAIL: App theme change did not refresh open widgets")
+            return False
+
+        print("OK: App theme changes refresh floating widgets")
+        return True
+    except Exception as exc:
+        print(f"FAIL: App theme refresh test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -466,6 +533,7 @@ def main():
         ("App Right Column Placement Tests", test_app_overlap_placement_keeps_right_column),
         ("Calendar Size Class Tests", test_calendar_size_classes),
         ("Widget Material Mode Tests", test_widget_material_modes),
+        ("App Theme Widget Refresh Tests", test_app_theme_change_refreshes_widgets),
     ]
 
     passed = 0

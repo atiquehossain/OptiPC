@@ -27,7 +27,7 @@ class NetworkSpeedWidget(BaseMiniWidget):
         self.download_value = self.create_responsive_label(
             self.download_frame,
             text="0 B/s",
-            size_key="metric",
+            size_key="title",
             weight="bold",
         )
         self.download_value.pack(anchor="w", padx=12, pady=(0, 8))
@@ -45,7 +45,7 @@ class NetworkSpeedWidget(BaseMiniWidget):
         self.upload_value = self.create_responsive_label(
             self.upload_frame,
             text="0 B/s",
-            size_key="metric",
+            size_key="title",
             weight="bold",
         )
         self.upload_value.pack(anchor="w", padx=12, pady=(0, 8))
@@ -64,6 +64,20 @@ class NetworkSpeedWidget(BaseMiniWidget):
 
         self.apply_theme()
         self.update_stats()
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        compact = self.widget_is_compact()
+        try:
+            if compact and self.note_label.winfo_manager():
+                self.note_label.pack_forget()
+            elif not compact and not self.note_label.winfo_manager():
+                self.note_label.pack(anchor="w", pady=(4, 0))
+            panel_pady = (0, 5) if compact else (0, 8)
+            self.download_frame.pack_configure(pady=panel_pady)
+            self.upload_frame.pack_configure(pady=panel_pady)
+        except Exception:
+            pass
 
     def refresh_theme(self) -> None:
         if hasattr(self, 'download_frame'):

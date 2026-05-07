@@ -587,6 +587,7 @@ class OptiPCApp(ctk.CTk):
         self.app_settings.set_appearance_mode(actual_mode)
         self.topbar.theme_switch.set(display_mode)
         self.sidebar.update_theme(actual_mode.lower())
+        self.apply_widget_theme_to_open_widgets()
         self.status_service.success(f"App theme changed to {actual_mode}", toast=True)
 
     def change_widget_theme(self, label: str) -> None:

@@ -58,10 +58,15 @@ class CPUWidget(BaseMiniWidget):
         logical = psutil.cpu_count(logical=True) or 0
         physical = psutil.cpu_count(logical=False) or logical
         freq = psutil.cpu_freq()
-        freq_text = f"Frequency: {freq.current:.0f} MHz" if freq else "Frequency: N/A"
+        compact = self.widget_is_compact()
+        freq_text = f"{freq.current:.0f} MHz" if compact and freq else f"Frequency: {freq.current:.0f} MHz" if freq else "Frequency: N/A"
         self.percent_label.configure(text=f"{percent:.0f}%")
-        self.detail_label.configure(text=f"Cores: {physical} physical / {logical} logical")
+        self.detail_label.configure(text=f"{physical}P / {logical}L cores" if compact else f"Cores: {physical} physical / {logical} logical")
         self.freq_label.configure(text=freq_text)
+        if compact and self.freq_label.winfo_manager():
+            self.freq_label.pack_forget()
+        elif not compact and not self.freq_label.winfo_manager():
+            self.freq_label.pack(pady=(2, 2))
         self.progress.set(percent / 100)
         self.after(1000, self.update_stats)
 
@@ -99,9 +104,15 @@ class RAMWidget(BaseMiniWidget):
         if not self._running:
             return
         mem = psutil.virtual_memory()
+        compact = self.widget_is_compact()
         self.percent_label.configure(text=f"{mem.percent:.0f}%")
-        self.detail_label.configure(text=f"{self.format_gb(mem.used)} / {self.format_gb(mem.total)}")
+        separator = "/" if compact else " / "
+        self.detail_label.configure(text=f"{self.format_gb(mem.used)}{separator}{self.format_gb(mem.total)}")
         self.avail_label.configure(text=f"Available: {self.format_gb(mem.available)}")
+        if compact and self.avail_label.winfo_manager():
+            self.avail_label.pack_forget()
+        elif not compact and not self.avail_label.winfo_manager():
+            self.avail_label.pack(pady=(2, 2))
         self.progress.set(mem.percent / 100)
         self.after(1000, self.update_stats)
 
@@ -145,16 +156,21 @@ class GPUWidget(BaseMiniWidget):
             if not gpus:
                 raise RuntimeError("No GPU info available")
             gpu = gpus[0]
+            compact = self.widget_is_compact()
             load_percent = float(gpu.load) * 100.0
-            self.name_label.configure(text=f"GPU: {gpu.name}")
+            self.name_label.configure(text=gpu.name if compact else f"GPU: {gpu.name}")
             self.percent_label.configure(text=f"{load_percent:.0f}%")
             self.mem_label.configure(text=f"Memory: {gpu.memoryUsed:.0f} MB / {gpu.memoryTotal:.0f} MB")
             self.progress.set(load_percent / 100.0)
         except Exception:
-            self.name_label.configure(text="GPU: Not available")
+            self.name_label.configure(text="GPU unavailable" if self.widget_is_compact() else "GPU: Not available")
             self.percent_label.configure(text="N/A")
             self.mem_label.configure(text="Memory: N/A")
             self.progress.set(0)
+        if self.widget_is_compact() and self.note_label.winfo_manager():
+            self.note_label.pack_forget()
+        elif not self.widget_is_compact() and not self.note_label.winfo_manager():
+            self.note_label.pack()
         self.after(1500, self.update_stats)
 
 
@@ -708,11 +724,12 @@ class ClockWidget(BaseMiniWidget):
         now = datetime.now()
         
         # Update time
-        time_str = now.strftime("%I:%M:%S %p")
+        compact = self.widget_is_compact()
+        time_str = now.strftime("%I:%M %p") if compact else now.strftime("%I:%M:%S %p")
         self.time_label.configure(text=time_str)
         
         # Update date
-        date_str = now.strftime("%B %d, %Y")
+        date_str = now.strftime("%b %d, %Y") if compact else now.strftime("%B %d, %Y")
         self.date_label.configure(text=date_str)
         
         # Update day of week
@@ -785,14 +802,26 @@ class UptimeWidget(BaseMiniWidget):
         uptime_seconds = (now - self.boot_time).total_seconds()
         
         # Update uptime display
-        uptime_str = self.format_uptime(uptime_seconds)
+        compact = self.widget_is_compact()
+        uptime_str = self.format_compact_uptime(uptime_seconds) if compact else self.format_uptime(uptime_seconds)
         self.uptime_label.configure(text=uptime_str)
         
         # Update boot time display
         boot_time_str = self.boot_time.strftime("Booted: %I:%M %p")
         boot_date_str = self.boot_time.strftime("%A, %B %d")
-        boot_str = f"{boot_time_str}\n{boot_date_str}"
+        boot_str = f"Since {self.boot_time.strftime('%I:%M %p')}" if compact else f"{boot_time_str}\n{boot_date_str}"
         self.boot_label.configure(text=boot_str)
         
         # Schedule next update
         self.after(30000, self.update_uptime)
+
+    @staticmethod
+    def format_compact_uptime(uptime_seconds):
+        days = int(uptime_seconds // 86400)
+        hours = int((uptime_seconds % 86400) // 3600)
+        minutes = int((uptime_seconds % 3600) // 60)
+        if days > 0:
+            return f"{days}d {hours}h"
+        if hours > 0:
+            return f"{hours}h {minutes}m"
+        return f"{minutes}m"

@@ -49,3 +49,23 @@ class WidgetSpecMixin:
     def widget_on_accent_color(self) -> str:
         theme = getattr(self, "theme", {}) or {}
         return theme.get("on_accent", "#ffffff")
+
+    def widget_logical_size(self) -> tuple[int, int]:
+        try:
+            from widgets.window_interactions import current_widget_geometry
+
+            _x, _y, width, height = current_widget_geometry(self)
+            return max(1, int(width)), max(1, int(height))
+        except Exception:
+            pass
+        try:
+            return max(1, int(self.winfo_width())), max(1, int(self.winfo_height()))
+        except Exception:
+            return (
+                int(getattr(self, "_default_width", 170) or 170),
+                int(getattr(self, "_default_height", 170) or 170),
+            )
+
+    def widget_is_compact(self) -> bool:
+        width, height = self.widget_logical_size()
+        return width <= 210 or height <= 190

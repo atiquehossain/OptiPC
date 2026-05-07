@@ -430,6 +430,17 @@ class PCHealthWidget(SmartWidgetBase):
         self.apply_theme()
         self.update_stats()
 
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        compact = self.widget_is_compact()
+        try:
+            if compact and self.warning_label.winfo_manager():
+                self.warning_label.pack_forget()
+            elif not compact and not self.warning_label.winfo_manager():
+                self.warning_label.pack(anchor="w", pady=(6, 0))
+        except Exception:
+            pass
+
     def update_stats(self) -> None:
         if not self._running:
             return
@@ -472,13 +483,15 @@ class PCHealthWidget(SmartWidgetBase):
         self.score_label.configure(text=str(score))
         self.status_label.configure(text=status)
         self.health_progress.set(score / 100)
+        compact = self.widget_is_compact()
         self.detail_label.configure(
             text=(
-                f"CPU {cpu:.0f}% | RAM {memory.percent:.0f}%\n"
-                f"Disk free {100 - disk.percent:.0f}% | Uptime {uptime_hours:.0f}h"
+                f"CPU {cpu:.0f}% | RAM {memory.percent:.0f}%"
+                if compact
+                else f"CPU {cpu:.0f}% | RAM {memory.percent:.0f}%\nDisk free {100 - disk.percent:.0f}% | Uptime {uptime_hours:.0f}h"
             )
         )
-        self.warning_label.configure(text="; ".join(warnings[:2]) if warnings else "No urgent issues detected")
+        self.warning_label.configure(text="" if compact else "; ".join(warnings[:2]) if warnings else "No urgent issues detected")
         self.set_compact_text(f"{score} {status} | CPU {cpu:.0f}% RAM {memory.percent:.0f}%")
         self.schedule_update(2000, self.update_stats)
 
@@ -592,6 +605,17 @@ class BatteryHealthWidget(SmartWidgetBase):
         self.apply_theme()
         self._refresh_battery_wear()
         self.update_stats()
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        compact = self.widget_is_compact()
+        try:
+            if compact and self.wear_label.winfo_manager():
+                self.wear_label.pack_forget()
+            elif not compact and not self.wear_label.winfo_manager():
+                self.wear_label.pack(anchor="w", pady=(4, 0))
+        except Exception:
+            pass
 
     def update_stats(self) -> None:
         if not self._running:
