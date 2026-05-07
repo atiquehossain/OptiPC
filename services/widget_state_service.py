@@ -102,6 +102,12 @@ class WidgetStateService:
         })
         self.save()
 
+    def set_widget_option(self, key: str, option: str, value: Any) -> None:
+        widgets = self._state.setdefault("widgets", {})
+        widget = widgets.setdefault(key, {})
+        widget[str(option)] = value
+        self.save()
+
     def reset_widget_geometry(self, key: str) -> None:
         """Remove saved geometry for a widget, forcing it to use defaults."""
         widgets = self._state.setdefault("widgets", {})

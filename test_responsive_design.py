@@ -147,6 +147,42 @@ def test_widget_text_roles():
         return False
 
 
+def test_analog_clock_widgets():
+    """Test clock widgets share analog rendering and city selection models."""
+    try:
+        from datetime import datetime
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from services.widget_state_service import WidgetStateService
+        from widgets.smart_widgets import AnalogClockRenderer, AnalogClockWidget, WorldClockWidget
+
+        if not hasattr(AnalogClockWidget, "_draw_clock"):
+            print("FAIL: Normal clock is not backed by the analog canvas widget")
+            return False
+        day = AnalogClockRenderer._palette({}, datetime(2026, 5, 7, 12, 0), face_mode="auto")
+        night = AnalogClockRenderer._palette({}, datetime(2026, 5, 7, 23, 0), face_mode="auto")
+        if day["face"] == night["face"]:
+            print("FAIL: Analog clock face does not react to day/night time")
+            return False
+        names = WorldClockWidget._normalize_city_names(["Tokyo", "London", "Missing", "Tokyo"])
+        if len(names) != 4 or names[0] != "Tokyo" or names[1] != "London":
+            print(f"FAIL: World clock city normalization failed: {names}")
+            return False
+        with TemporaryDirectory() as tmp_dir:
+            service = WidgetStateService(Path(tmp_dir) / "widget_state.json")
+            service.set_widget_option("world_clock", "cities", ["Tokyo", "London"])
+            if service.get_widget_state("world_clock").get("cities") != ["Tokyo", "London"]:
+                print("FAIL: Widget state service did not persist custom widget options")
+                return False
+
+        print("OK: Analog clock widgets share rendering and city selection state")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Analog clock widget test error: {exc}")
+        return False
+
+
 def test_cpu_usage_helpers():
     """Test CPU usage formatting keeps low activity visible."""
     try:
@@ -738,6 +774,7 @@ def main():
         ("Widget Size Tests", test_widget_sizes),
         ("Widget Spec Tests", test_widget_specs),
         ("Widget Text Role Tests", test_widget_text_roles),
+        ("Analog Clock Widget Tests", test_analog_clock_widgets),
         ("CPU Usage Helper Tests", test_cpu_usage_helpers),
         ("Bluetooth Connection Tests", test_bluetooth_widget_connection_summary),
         ("Hidden Subprocess Tests", test_widget_subprocesses_run_hidden),

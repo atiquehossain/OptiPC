@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import socket
 import subprocess
 import threading
@@ -430,6 +431,192 @@ class SmartWidgetBase(BaseMiniWidget):
             points.extend([index * step, height - (normalized * (height - 8)) - 4])
         canvas.create_line(points, fill=self.widget_accent_color(), width=2, smooth=True)
         canvas.create_line(0, height - 1, width, height - 1, fill=self.theme.get("border", self.theme["progress_track"]))
+
+
+class AnalogClockRenderer:
+    """Reusable canvas painter for local and world clock widgets."""
+
+    SECOND_HAND_COLOR = "#ff9f0a"
+
+    @staticmethod
+    def _point(cx: float, cy: float, radius: float, angle_degrees: float) -> tuple[float, float]:
+        radians = math.radians(angle_degrees - 90)
+        return cx + math.cos(radians) * radius, cy + math.sin(radians) * radius
+
+    @staticmethod
+    def _is_daytime(now: datetime) -> bool:
+        return 6 <= int(now.hour) < 18
+
+    @classmethod
+    def _palette(cls, theme: dict, now: datetime, *, face_mode: str = "auto") -> dict[str, str]:
+        material = str(theme.get("material_mode", "full_color"))
+        if face_mode == "dark" or (face_mode == "auto" and not cls._is_daytime(now)):
+            return {
+                "face": "#2c2c2e" if material != "monochrome" else "#303033",
+                "primary": "#f5f5f7",
+                "muted": "#d1d1d6",
+                "tick": "#b8b8bf",
+                "border": "#3a3a3f",
+            }
+        return {
+            "face": "#f5f5f7",
+            "primary": "#1d1d1f",
+            "muted": "#6e6e73",
+            "tick": "#a8a8ad",
+            "border": "#d1d1d6",
+        }
+
+    @classmethod
+    def draw(
+        cls,
+        canvas: tk.Canvas,
+        theme: dict,
+        now: datetime,
+        bounds: tuple[float, float, float, float],
+        *,
+        label: str = "",
+        face_mode: str = "auto",
+        show_second: bool = True,
+        show_numbers: bool = True,
+        label_inside: bool = False,
+    ) -> None:
+        x0, y0, x1, y1 = bounds
+        width = max(1.0, x1 - x0)
+        height = max(1.0, y1 - y0)
+        cx = x0 + width / 2.0
+        cy = y0 + height / 2.0
+        radius = max(10.0, min(width, height) * 0.45)
+        palette = cls._palette(theme, now, face_mode=face_mode)
+
+        shadow = theme.get("shadow", "#000000")
+        if radius >= 28:
+            canvas.create_oval(cx - radius + 2, cy - radius + 3, cx + radius + 2, cy + radius + 3, fill=shadow, outline="")
+        canvas.create_oval(
+            cx - radius,
+            cy - radius,
+            cx + radius,
+            cy + radius,
+            fill=palette["face"],
+            outline=palette["border"],
+            width=max(1, int(radius * 0.035)),
+        )
+
+        major_tick_width = max(1, int(radius * 0.035))
+        minor_tick_width = 1
+        for tick in range(60):
+            is_major = tick % 5 == 0
+            outer = radius * 0.91
+            inner = radius * (0.76 if is_major else 0.84)
+            angle = tick * 6
+            x_start, y_start = cls._point(cx, cy, inner, angle)
+            x_end, y_end = cls._point(cx, cy, outer, angle)
+            canvas.create_line(
+                x_start,
+                y_start,
+                x_end,
+                y_end,
+                fill=palette["tick"],
+                width=major_tick_width if is_major else minor_tick_width,
+            )
+
+        if show_numbers:
+            number_size = max(6, min(24, int(radius * 0.25)))
+            numbers = range(1, 13) if radius >= 42 else (12, 3, 6, 9)
+            for number in numbers:
+                x_text, y_text = cls._point(cx, cy, radius * 0.62, number * 30)
+                canvas.create_text(
+                    x_text,
+                    y_text,
+                    text=str(number),
+                    fill=palette["primary"],
+                    font=("Segoe UI", number_size, "bold"),
+                )
+
+        if label and label_inside:
+            label_size = max(6, min(11, int(radius * 0.17)))
+            canvas.create_text(
+                cx,
+                cy - radius * 0.33,
+                text=label,
+                fill=palette["muted"],
+                font=("Segoe UI", label_size, "bold"),
+            )
+
+        second = now.second + (now.microsecond / 1_000_000)
+        minute = now.minute + (second / 60)
+        hour = (now.hour % 12) + (minute / 60)
+        hour_angle = hour * 30
+        minute_angle = minute * 6
+        second_angle = second * 6
+
+        hour_x, hour_y = cls._point(cx, cy, radius * 0.43, hour_angle)
+        minute_x, minute_y = cls._point(cx, cy, radius * 0.68, minute_angle)
+        canvas.create_line(cx, cy, hour_x, hour_y, fill=palette["primary"], width=max(3, int(radius * 0.10)))
+        canvas.create_line(cx, cy, minute_x, minute_y, fill=palette["primary"], width=max(2, int(radius * 0.075)))
+
+        if show_second:
+            second_x, second_y = cls._point(cx, cy, radius * 0.86, second_angle)
+            tail_x, tail_y = cls._point(cx, cy, radius * -0.20, second_angle)
+            canvas.create_line(tail_x, tail_y, second_x, second_y, fill=cls.SECOND_HAND_COLOR, width=max(1, int(radius * 0.025)))
+
+        center_radius = max(2, int(radius * 0.055))
+        canvas.create_oval(
+            cx - center_radius,
+            cy - center_radius,
+            cx + center_radius,
+            cy + center_radius,
+            fill=cls.SECOND_HAND_COLOR,
+            outline=palette["primary"],
+            width=1,
+        )
+
+
+class AnalogClockWidget(SmartWidgetBase):
+    """Single-source local analog clock with smooth hand movement."""
+
+    def __init__(self, parent, x: int = 400, y: int = 40, theme_name: str | None = None):
+        super().__init__(parent, None, "clock", x=x, y=y, theme_name=theme_name)
+        self.clock_canvas = tk.Canvas(self.body, bg=self.theme["panel"], highlightthickness=0, bd=0)
+        self._theme_canvases.append(self.clock_canvas)
+        self.clock_canvas.pack(fill="both", expand=True)
+        self.clock_canvas.bind("<Configure>", lambda _event: self._draw_clock(), add="+")
+        self._bind_widget_chrome(self.clock_canvas)
+        self.apply_theme()
+        self.update_clock()
+
+    def refresh_theme(self) -> None:
+        super().refresh_theme()
+        canvas = getattr(self, "clock_canvas", None)
+        if canvas is not None:
+            canvas.configure(bg=self.theme["panel"])
+            self._draw_clock()
+
+    def update_clock(self) -> None:
+        if not self._running:
+            return
+        self._draw_clock()
+        now = datetime.now().astimezone()
+        self.set_compact_text(now.strftime("%I:%M %p").lstrip("0"))
+        self.schedule_update(200, self.update_clock)
+
+    def _draw_clock(self) -> None:
+        canvas = getattr(self, "clock_canvas", None)
+        if canvas is None:
+            return
+        canvas.delete("all")
+        width = max(int(canvas.winfo_width()), 100)
+        height = max(int(canvas.winfo_height()), 100)
+        canvas.create_rectangle(0, 0, width, height, fill=self.theme.get("panel", "#1f1f22"), outline="")
+        margin = max(6, int(min(width, height) * 0.06))
+        AnalogClockRenderer.draw(
+            canvas,
+            self.theme,
+            datetime.now().astimezone(),
+            (margin, margin, width - margin, height - margin),
+            face_mode="light",
+            show_second=True,
+            show_numbers=True,
+        )
 
 
 class PCHealthWidget(SmartWidgetBase):
@@ -1234,17 +1421,37 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
 
 
 class WorldClockWidget(SmartWidgetBase):
-    """Compact multi-timezone clock using the shared smart-widget shell."""
+    """City-based world clock grid with synchronized analog faces."""
 
-    DEFAULT_ZONES = (
-        ("Local", None),
-        ("Dhaka", "Asia/Dhaka"),
-        ("London", "Europe/London"),
-        ("NYC", "America/New_York"),
-    )
+    CITY_OPTIONS = {
+        "Dhaka": ("DHA", "Asia/Dhaka"),
+        "San Francisco": ("SF", "America/Los_Angeles"),
+        "New York": ("NYC", "America/New_York"),
+        "London": ("LON", "Europe/London"),
+        "Tokyo": ("TYO", "Asia/Tokyo"),
+        "Paris": ("PAR", "Europe/Paris"),
+        "Zurich": ("ZRH", "Europe/Zurich"),
+        "Dubai": ("DXB", "Asia/Dubai"),
+        "Singapore": ("SIN", "Asia/Singapore"),
+        "Sydney": ("SYD", "Australia/Sydney"),
+        "Los Angeles": ("LA", "America/Los_Angeles"),
+        "Chicago": ("CHI", "America/Chicago"),
+        "Toronto": ("TOR", "America/Toronto"),
+        "Berlin": ("BER", "Europe/Berlin"),
+        "Delhi": ("DEL", "Asia/Kolkata"),
+    }
+    PRESETS = {
+        "Global": ("San Francisco", "New York", "London", "Dhaka"),
+        "Apple Reference": ("San Francisco", "New York", "London", "Zurich"),
+        "Asia": ("Dhaka", "Tokyo", "Singapore", "Dubai"),
+        "Americas": ("San Francisco", "Los Angeles", "Chicago", "New York"),
+        "Europe": ("London", "Paris", "Berlin", "Zurich"),
+    }
+    DEFAULT_CITY_NAMES = PRESETS["Global"]
 
     def __init__(self, parent, x: int = 400, y: int = 360, theme_name: str | None = None):
         super().__init__(parent, None, "world_clock", x=x, y=y, theme_name=theme_name)
+        self._city_names = self._load_city_names()
         self.clock_canvas = tk.Canvas(self.body, bg=self.theme["panel"], highlightthickness=0, bd=0)
         self._theme_canvases.append(self.clock_canvas)
         self.clock_canvas.pack(fill="both", expand=True)
@@ -1260,35 +1467,146 @@ class WorldClockWidget(SmartWidgetBase):
             canvas.configure(bg=self.theme["panel"])
             self._draw_world_clocks()
 
+    def _build_context_menu(self) -> None:
+        super()._build_context_menu()
+        preset_menu = tk.Menu(self._context_menu, tearoff=0)
+        for preset_name in self.PRESETS:
+            preset_menu.add_command(label=preset_name, command=lambda name=preset_name: self.set_city_preset(name))
+        self._city_preset_menu = preset_menu
+        self._context_menu.insert_separator(0)
+        self._context_menu.insert_command(0, label="Edit Cities...", command=self.open_city_picker)
+        self._context_menu.insert_cascade(0, label="City Preset", menu=preset_menu)
+
+    def set_city_preset(self, preset_name: str) -> None:
+        names = self.PRESETS.get(preset_name, self.DEFAULT_CITY_NAMES)
+        self._city_names = self._normalize_city_names(names)
+        self._persist_city_names()
+        self._draw_world_clocks()
+        self.set_compact_text(" | ".join(self._city_labels()))
+
+    def open_city_picker(self) -> None:
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("World Clock Cities")
+        dialog.geometry(f"320x310+{self.winfo_rootx() + 24}+{self.winfo_rooty() + 24}")
+        dialog.resizable(False, False)
+        dialog.attributes("-topmost", True)
+        try:
+            dialog.transient(self)
+        except Exception:
+            pass
+
+        frame = ctk.CTkFrame(dialog, corner_radius=16, fg_color=self.theme.get("container", self.theme["panel"]))
+        frame.pack(fill="both", expand=True, padx=12, pady=12)
+        title = ctk.CTkLabel(
+            frame,
+            text="Choose 4 cities",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=self.theme["text"],
+        )
+        title.pack(anchor="w", padx=14, pady=(14, 8))
+        values = sorted(self.CITY_OPTIONS)
+        selected_names = list(self._city_names)
+        variables: list[tk.StringVar] = []
+        for index in range(4):
+            row = ctk.CTkFrame(frame, fg_color="transparent")
+            row.pack(fill="x", padx=14, pady=5)
+            label = ctk.CTkLabel(row, text=f"Clock {index + 1}", width=70, anchor="w", text_color=self.theme["muted"])
+            label.pack(side="left")
+            variable = tk.StringVar(value=selected_names[index] if index < len(selected_names) else self.DEFAULT_CITY_NAMES[index])
+            variables.append(variable)
+            menu = ctk.CTkOptionMenu(
+                row,
+                values=values,
+                variable=variable,
+                fg_color=self.theme["button"],
+                button_color=self.theme["button"],
+                button_hover_color=self.theme["button_hover"],
+                text_color=self.theme["text"],
+            )
+            menu.pack(side="left", fill="x", expand=True)
+
+        action_row = ctk.CTkFrame(frame, fg_color="transparent")
+        action_row.pack(fill="x", padx=14, pady=(12, 14))
+        action_row.grid_columnconfigure((0, 1), weight=1)
+
+        def save_selection() -> None:
+            self._city_names = self._normalize_city_names([variable.get() for variable in variables])
+            self._persist_city_names()
+            self._draw_world_clocks()
+            self.set_compact_text(" | ".join(self._city_labels()))
+            dialog.destroy()
+
+        cancel = ctk.CTkButton(
+            action_row,
+            text="Cancel",
+            height=30,
+            corner_radius=12,
+            fg_color=self.theme["button"],
+            hover_color=self.theme["button_hover"],
+            text_color=self.theme["text"],
+            command=dialog.destroy,
+        )
+        cancel.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        save = ctk.CTkButton(
+            action_row,
+            text="Save",
+            height=30,
+            corner_radius=12,
+            fg_color=self.theme["button"],
+            hover_color=self.theme["button_hover"],
+            text_color=self.theme["text"],
+            command=save_selection,
+        )
+        save.grid(row=0, column=1, padx=(5, 0), sticky="ew")
+
     def update_clock(self) -> None:
         if not self._running:
             return
         self._draw_world_clocks()
-        local_time = self._zone_time("Local", None)
-        self.set_compact_text(f"Local {local_time['time']} {local_time['ampm']}")
-        self.schedule_update(1000, self.update_clock)
+        self.set_compact_text(" | ".join(self._city_labels()))
+        self.schedule_update(200, self.update_clock)
 
-    def _zone_time(self, label: str, zone_name: str | None) -> dict[str, str]:
+    def _load_city_names(self) -> tuple[str, str, str, str]:
+        state = {}
         try:
-            now = datetime.now().astimezone() if zone_name is None else datetime.now(ZoneInfo(zone_name))
+            state = self.master.widget_state_service.get_widget_state("world_clock")
         except Exception:
-            now = datetime.now().astimezone()
-        local_today = datetime.now().astimezone().date()
-        date_delta = (now.date() - local_today).days
-        if date_delta == 0:
-            date_label = "Today"
-        elif date_delta == 1:
-            date_label = "Tomorrow"
-        elif date_delta == -1:
-            date_label = "Yesterday"
-        else:
-            date_label = now.strftime("%b %d")
-        return {
-            "label": label,
-            "time": now.strftime("%I:%M").lstrip("0"),
-            "ampm": now.strftime("%p"),
-            "date": date_label,
-        }
+            pass
+        saved = state.get("cities") if isinstance(state, dict) else None
+        return self._normalize_city_names(saved if isinstance(saved, list) else self.DEFAULT_CITY_NAMES)
+
+    def _persist_city_names(self) -> None:
+        service = getattr(self.master, "widget_state_service", None)
+        if service is not None and hasattr(service, "set_widget_option"):
+            service.set_widget_option("world_clock", "cities", list(self._city_names))
+
+    @classmethod
+    def _normalize_city_names(cls, names) -> tuple[str, str, str, str]:
+        normalized: list[str] = []
+        for name in list(names or []):
+            candidate = str(name)
+            if candidate in cls.CITY_OPTIONS and candidate not in normalized:
+                normalized.append(candidate)
+        for fallback in cls.DEFAULT_CITY_NAMES:
+            if fallback not in normalized:
+                normalized.append(fallback)
+            if len(normalized) >= 4:
+                break
+        return tuple(normalized[:4])  # type: ignore[return-value]
+
+    def _city_labels(self) -> list[str]:
+        labels = []
+        for city_name in self._city_names:
+            label, _zone_name = self.CITY_OPTIONS.get(city_name, ("UTC", "UTC"))
+            labels.append(label)
+        return labels
+
+    def _city_now(self, city_name: str) -> tuple[str, datetime]:
+        label, zone_name = self.CITY_OPTIONS.get(city_name, ("UTC", "UTC"))
+        try:
+            return label, datetime.now(ZoneInfo(zone_name))
+        except Exception:
+            return label, datetime.now().astimezone()
 
     def _draw_world_clocks(self) -> None:
         canvas = getattr(self, "clock_canvas", None)
@@ -1297,57 +1615,30 @@ class WorldClockWidget(SmartWidgetBase):
         canvas.delete("all")
         width = max(int(canvas.winfo_width()), 120)
         height = max(int(canvas.winfo_height()), 98)
-        panel = self.theme.get("panel", "#1f1f22")
-        text = self.theme.get("text", "#ffffff")
-        muted = self.theme.get("muted", "#a8a8ad")
-        accent = self.widget_accent_color()
-        border = self.theme.get("border", self.theme.get("progress_track", "#3a3a3f"))
-        canvas.create_rectangle(0, 0, width, height, fill=panel, outline="")
+        canvas.create_rectangle(0, 0, width, height, fill=self.theme.get("panel", "#1f1f22"), outline="")
 
         cell_w = width / 2.0
         cell_h = height / 2.0
-        compact = cell_w < 82 or cell_h < 62
-        label_size = max(8, min(11, responsive_font_size(self, "tiny")))
-        time_size = max(12, min(17, responsive_font_size(self, "title") - (2 if compact else 0)))
-        suffix_size = max(7, min(9, responsive_font_size(self, "tiny")))
-        date_size = max(7, min(9, responsive_font_size(self, "tiny")))
-
-        canvas.create_line(cell_w, 8, cell_w, height - 8, fill=border, width=1)
-        canvas.create_line(8, cell_h, width - 8, cell_h, fill=border, width=1)
-
-        for index, (label, zone_name) in enumerate(self.DEFAULT_ZONES):
+        gap = max(4, int(min(width, height) * 0.03))
+        for index, city_name in enumerate(self._city_names):
             row = index // 2
             column = index % 2
-            x0 = column * cell_w
-            y0 = row * cell_h
-            cx = x0 + cell_w / 2.0
-            label_y = y0 + max(11, cell_h * 0.18)
-            time_y = y0 + cell_h * (0.52 if compact else 0.50)
-            date_y = y0 + cell_h - max(10, cell_h * 0.17)
-            info = self._zone_time(label, zone_name)
-            label_color = accent if index == 0 else muted
-            canvas.create_text(
-                cx,
-                label_y,
-                text=info["label"],
-                fill=label_color,
-                font=("Segoe UI", label_size, "bold"),
+            x0 = column * cell_w + gap
+            y0 = row * cell_h + gap
+            x1 = (column + 1) * cell_w - gap
+            y1 = (row + 1) * cell_h - gap
+            label, now = self._city_now(city_name)
+            AnalogClockRenderer.draw(
+                canvas,
+                self.theme,
+                now,
+                (x0, y0, x1, y1),
+                label=label,
+                face_mode="auto",
+                show_second=True,
+                show_numbers=True,
+                label_inside=True,
             )
-            canvas.create_text(
-                cx,
-                time_y,
-                text=info["time"],
-                fill=text,
-                font=("Segoe UI", time_size, "bold"),
-            )
-            if cell_w >= 70:
-                canvas.create_text(
-                    cx,
-                    date_y,
-                    text=info["date"] if not compact else info["ampm"],
-                    fill=muted,
-                    font=("Segoe UI", date_size if not compact else suffix_size),
-                )
 
 
 class WindowsUpdateWidget(SmartWidgetBase):

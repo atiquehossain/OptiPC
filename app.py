@@ -47,6 +47,7 @@ from widgets.liquid_glass_widgets import (
     LiquidStorageWidget, LiquidCalendarWidget, LiquidClockWidget, LiquidUptimeWidget
 )
 from widgets.smart_widgets import (
+    AnalogClockWidget,
     BatteryHealthWidget,
     BluetoothWidget,
     DiskIOWidget,
@@ -243,7 +244,7 @@ class OptiPCApp(ctk.CTk):
                 "storage": LiquidStorageWidget,
                 "network_speed": NetworkSpeedWidget,  # Keep original for now
                 "calendar": LiquidCalendarWidget,
-                "clock": LiquidClockWidget,
+                "clock": AnalogClockWidget,
                 "uptime": LiquidUptimeWidget,
                 **smart_widgets,
             }
@@ -257,7 +258,7 @@ class OptiPCApp(ctk.CTk):
                 "storage": StorageWidget,
                 "network_speed": NetworkSpeedWidget,
                 "calendar": CalendarWidget,
-                "clock": ClockWidget,
+                "clock": AnalogClockWidget,
                 "uptime": UptimeWidget,
                 **smart_widgets,
             }
