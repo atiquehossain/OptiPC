@@ -207,6 +207,73 @@ def test_widget_overlap_placement():
         return False
 
 
+def test_scaled_screen_edge_uses_logical_size():
+    """Test right-edge placement is not pulled toward the middle on scaled displays."""
+    try:
+        from widgets import window_interactions
+
+        class FakeWindow:
+            def _get_window_scaling(self):
+                return 1.5
+
+        original_bounds = window_interactions.get_virtual_screen_bounds
+        window_interactions.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1280, 720)
+        try:
+            x, y = window_interactions.clamp_widget_position(
+                FakeWindow(),
+                980,
+                80,
+                280,
+                210,
+            )
+        finally:
+            window_interactions.get_virtual_screen_bounds = original_bounds
+
+        if x != 980 or y != 80:
+            print(f"FAIL: Right-edge logical placement was clamped to {(x, y)}")
+            return False
+
+        print("OK: Scaled display edge placement uses logical widget size")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Scaled screen edge placement test error: {exc}")
+        return False
+
+
+def test_app_overlap_placement_keeps_right_column():
+    """Test opening a second widget does not pull a free right-column drop inward."""
+    try:
+        import app as app_module
+
+        class FakeApp:
+            def _visible_widget_rects(self, exclude_key=None):
+                return [(980, 80, 280, 210)]
+
+        original_bounds = app_module.get_virtual_screen_bounds
+        app_module.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1280, 720)
+        try:
+            x, y = app_module.OptiPCApp._non_overlapping_widget_position(
+                FakeApp(),
+                "ram",
+                980,
+                320,
+                280,
+                210,
+            )
+        finally:
+            app_module.get_virtual_screen_bounds = original_bounds
+
+        if (x, y) != (980, 320):
+            print(f"FAIL: Free right-column widget was moved to {(x, y)}")
+            return False
+
+        print("OK: App overlap placement keeps free right-column drops")
+        return True
+    except Exception as exc:
+        print(f"FAIL: App right-column placement test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -219,6 +286,8 @@ def main():
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),
         ("Live Responsive Helper Tests", test_live_responsive_helper),
         ("Widget Overlap Placement Tests", test_widget_overlap_placement),
+        ("Scaled Screen Edge Placement Tests", test_scaled_screen_edge_uses_logical_size),
+        ("App Right Column Placement Tests", test_app_overlap_placement_keeps_right_column),
     ]
 
     passed = 0

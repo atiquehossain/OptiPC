@@ -205,9 +205,8 @@ def clamp_widget_position(window, x: int | float, y: int | float, width: int | f
     bounds = get_virtual_screen_bounds(window)
     if bounds is not None:
         virtual_x, virtual_y, virtual_width, virtual_height = bounds
-        effective_width, effective_height = effective_window_size(window, width, height)
-        max_x = virtual_x + virtual_width - effective_width
-        max_y = virtual_y + virtual_height - effective_height
+        max_x = virtual_x + virtual_width - int(width)
+        max_y = virtual_y + virtual_height - int(height)
         return max(virtual_x, min(x, max_x)), max(virtual_y, min(y, max_y))
     return x, y
 
