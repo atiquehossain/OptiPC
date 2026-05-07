@@ -10,6 +10,8 @@ from config.constants import (
     DEFAULT_WIDGET_WIDTH,
     LEGACY_WIDGET_DEFAULT_SIZES,
     WIDGET_DEFAULT_SIZE_VERSION,
+    WIDGET_SIZE_CATEGORY_BY_KEY,
+    WIDGET_SIZES,
 )
 
 
@@ -47,7 +49,7 @@ class WidgetStateService:
         changed = False
         widgets = self._state.setdefault("widgets", {})
         if isinstance(widgets, dict):
-            for widget in widgets.values():
+            for key, widget in widgets.items():
                 if not isinstance(widget, dict):
                     continue
                 try:
@@ -55,8 +57,10 @@ class WidgetStateService:
                 except Exception:
                     continue
                 if size in LEGACY_WIDGET_DEFAULT_SIZES:
-                    widget["width"] = DEFAULT_WIDGET_WIDTH
-                    widget["height"] = DEFAULT_WIDGET_HEIGHT
+                    category = WIDGET_SIZE_CATEGORY_BY_KEY.get(str(key), "default")
+                    target_size = WIDGET_SIZES.get(category, WIDGET_SIZES["default"])
+                    widget["width"] = int(target_size.get("width", DEFAULT_WIDGET_WIDTH))
+                    widget["height"] = int(target_size.get("height", DEFAULT_WIDGET_HEIGHT))
                     changed = True
 
         self._state["widget_default_size_version"] = WIDGET_DEFAULT_SIZE_VERSION

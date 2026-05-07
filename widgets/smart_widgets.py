@@ -52,8 +52,8 @@ class SmartWidgetBase(BaseMiniWidget):
         self._is_compact = False
         self._latest_compact_text = ""
         self._scheduled_after_ids: set[str] = set()
-        self.MIN_WIDTH = max(260, int(width * 0.82))
-        self.MIN_HEIGHT = max(210, int(height * 0.84))
+        self.MIN_WIDTH = max(150, int(width * 0.82))
+        self.MIN_HEIGHT = max(150, int(height * 0.84))
         self.MAX_WIDTH = max(width + 120, int(width * 1.45))
         self.MAX_HEIGHT = max(height + 90, int(height * 1.35))
         super().__init__(parent, title, width=width, height=height, x=x, y=y, widget_key=widget_key)

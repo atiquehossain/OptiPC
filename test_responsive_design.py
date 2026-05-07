@@ -39,20 +39,28 @@ def test_imports():
 
 
 def test_widget_sizes():
-    """Test all widget categories share the same default dimensions."""
+    """Test widget categories use the configured default dimensions."""
     try:
         from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH, WIDGET_SIZES
 
-        for size_name in ("default", "small", "medium", "large", "extra_large"):
+        expected_sizes = {
+            "small": {"width": 170, "height": 170},
+            "medium": {"width": 368, "height": 170},
+            "large": {"width": 364, "height": 376},
+            "extra_large": {"width": 745, "height": 376},
+            "default": {"width": DEFAULT_WIDGET_WIDTH, "height": DEFAULT_WIDGET_HEIGHT},
+        }
+
+        for size_name, expected in expected_sizes.items():
             actual = WIDGET_SIZES[size_name]
-            if actual["width"] != DEFAULT_WIDGET_WIDTH or actual["height"] != DEFAULT_WIDGET_HEIGHT:
+            if actual != expected:
                 print(
-                    f"FAIL: Size {size_name}: expected {DEFAULT_WIDGET_WIDTH}x{DEFAULT_WIDGET_HEIGHT}, "
+                    f"FAIL: Size {size_name}: expected {expected['width']}x{expected['height']}, "
                     f"got {actual['width']}x{actual['height']}"
                 )
                 return False
 
-        print("OK: All widget default sizes are uniform")
+        print("OK: Widget default sizes match the configured presets")
         return True
     except Exception as exc:
         print(f"FAIL: Size test error: {exc}")
@@ -79,22 +87,20 @@ def test_responsive_fonts():
 
 
 def test_widget_size_limits():
-    """Test compact widgets cannot shrink below readable dimensions."""
+    """Test resize limits contain each category's default dimensions."""
     try:
-        from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH, WIDGET_SIZE_LIMITS
+        from config.constants import WIDGET_SIZE_LIMITS, WIDGET_SIZES
 
         for size_name, limits in WIDGET_SIZE_LIMITS.items():
-            if limits["min_width"] > DEFAULT_WIDGET_WIDTH or limits["min_height"] > DEFAULT_WIDGET_HEIGHT:
-                print(f"FAIL: {size_name} minimum exceeds the uniform default size")
+            default_size = WIDGET_SIZES[size_name]
+            if limits["min_width"] > default_size["width"] or limits["min_height"] > default_size["height"]:
+                print(f"FAIL: {size_name} minimum exceeds its default size")
+                return False
+            if limits["max_width"] < default_size["width"] or limits["max_height"] < default_size["height"]:
+                print(f"FAIL: {size_name} maximum is below its default size")
                 return False
 
-        for size_name in ("small", "default"):
-            limits = WIDGET_SIZE_LIMITS[size_name]
-            if limits["min_width"] < 190 or limits["min_height"] < 190:
-                print(f"FAIL: {size_name} minimum is too small for readable compact widgets")
-                return False
-
-        print("OK: Widget minimums fit inside the uniform default size")
+        print("OK: Widget resize limits contain every default size")
         return True
     except Exception as exc:
         print(f"FAIL: Size limit test error: {exc}")
@@ -102,12 +108,12 @@ def test_widget_size_limits():
 
 
 def test_legacy_default_size_migration():
-    """Test saved legacy default widget sizes normalize to the common default."""
+    """Test saved legacy default widget sizes normalize to their category defaults."""
     try:
         import tempfile
         from pathlib import Path
 
-        from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH
+        from config.constants import WIDGET_SIZES
         from services.widget_state_service import WidgetStateService
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -115,6 +121,8 @@ def test_legacy_default_size_migration():
             path.write_text(
                 (
                     '{"widgets":{"cpu":{"visible":true,"width":200,"height":200},'
+                    '"network_speed":{"visible":true,"width":280,"height":210},'
+                    '"calendar":{"visible":true,"width":320,"height":240},'
                     '"custom":{"visible":true,"width":333,"height":211}},'
                     '"main_window":{}}'
                 ),
@@ -122,16 +130,30 @@ def test_legacy_default_size_migration():
             )
             service = WidgetStateService(path)
             cpu = service.get_widget_state("cpu")
+            network_speed = service.get_widget_state("network_speed")
+            calendar = service.get_widget_state("calendar")
             custom = service.get_widget_state("custom")
 
-        if cpu.get("width") != DEFAULT_WIDGET_WIDTH or cpu.get("height") != DEFAULT_WIDGET_HEIGHT:
-            print("FAIL: Legacy default size was not normalized")
+        if cpu.get("width") != WIDGET_SIZES["small"]["width"] or cpu.get("height") != WIDGET_SIZES["small"]["height"]:
+            print("FAIL: Legacy small default size was not normalized")
+            return False
+        if (
+            network_speed.get("width") != WIDGET_SIZES["medium"]["width"]
+            or network_speed.get("height") != WIDGET_SIZES["medium"]["height"]
+        ):
+            print("FAIL: Legacy medium default size was not normalized")
+            return False
+        if (
+            calendar.get("width") != WIDGET_SIZES["extra_large"]["width"]
+            or calendar.get("height") != WIDGET_SIZES["extra_large"]["height"]
+        ):
+            print("FAIL: Legacy extra large default size was not normalized")
             return False
         if custom.get("width") != 333 or custom.get("height") != 211:
             print("FAIL: Custom widget size was changed during migration")
             return False
 
-        print("OK: Legacy default sizes migrate without touching custom sizes")
+        print("OK: Legacy default sizes migrate by category without touching custom sizes")
         return True
     except Exception as exc:
         print(f"FAIL: Legacy default size migration test error: {exc}")
@@ -145,8 +167,8 @@ def test_live_responsive_helper():
 
         class FakeWindow:
             size_category = "small"
-            _default_width = 280
-            _default_height = 210
+            _default_width = 170
+            _default_height = 170
             PADDING_HORIZONTAL = 20
 
             def __init__(self, width, height):
@@ -159,8 +181,8 @@ def test_live_responsive_helper():
             def winfo_height(self):
                 return self.height
 
-        compact = FakeWindow(190, 190)
-        roomy = FakeWindow(280, 210)
+        compact = FakeWindow(150, 150)
+        roomy = FakeWindow(170, 170)
 
         if responsive_font_size(compact, "body") > responsive_font_size(roomy, "body"):
             print("FAIL: Compact font is larger than roomy font")
@@ -221,15 +243,15 @@ def test_scaled_screen_edge_uses_logical_size():
         try:
             x, y = window_interactions.clamp_widget_position(
                 FakeWindow(),
-                1480,
+                1640,
                 80,
-                280,
-                210,
+                170,
+                170,
             )
         finally:
             window_interactions.get_virtual_screen_bounds = original_bounds
 
-        if x != 1480 or y != 80:
+        if x != 1640 or y != 80:
             print(f"FAIL: Right-edge logical placement was clamped to {(x, y)}")
             return False
 
@@ -253,7 +275,7 @@ def test_app_overlap_placement_keeps_right_column():
                 return app_module.effective_window_size(self, width, height)
 
             def _visible_widget_rects(self, exclude_key=None):
-                return [(1480, 80, 420, 315)]
+                return [(1640, 80, 255, 255)]
 
         original_bounds = app_module.get_virtual_screen_bounds
         app_module.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1920, 1200)
@@ -261,15 +283,15 @@ def test_app_overlap_placement_keeps_right_column():
             x, y = app_module.OptiPCApp._non_overlapping_widget_position(
                 FakeApp(),
                 "ram",
-                1480,
+                1640,
                 420,
-                280,
-                210,
+                170,
+                170,
             )
         finally:
             app_module.get_virtual_screen_bounds = original_bounds
 
-        if (x, y) != (1480, 420):
+        if (x, y) != (1640, 420):
             print(f"FAIL: Free right-column widget was moved to {(x, y)}")
             return False
 
