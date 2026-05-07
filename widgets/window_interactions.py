@@ -16,13 +16,77 @@ CONTROL_CLASS_NAMES = {
     "CTkTextbox",
 }
 
+CURSOR_MAP = {
+    None: "arrow",
+    "n": "sb_v_double_arrow",
+    "s": "sb_v_double_arrow",
+    "e": "sb_h_double_arrow",
+    "w": "sb_h_double_arrow",
+    "ne": "size_ne_sw",
+    "sw": "size_ne_sw",
+    "nw": "size_nw_se",
+    "se": "size_nw_se",
+    "move": "fleur",
+}
+
 
 def is_control_widget(widget) -> bool:
-    return widget.__class__.__name__ in CONTROL_CLASS_NAMES
+    current = widget
+    for _ in range(8):
+        if current is None:
+            return False
+        if current.__class__.__name__ in CONTROL_CLASS_NAMES:
+            return True
+        current = getattr(current, "master", None)
+    return False
+
+
+def cursor_for_direction(direction: str | None) -> str:
+    return CURSOR_MAP.get(direction, "arrow")
+
+
+def set_widget_cursor(widget, cursor: str, *, recursive: bool = False) -> None:
+    stack = [widget]
+    seen: set[int] = set()
+    while stack:
+        current = stack.pop()
+        if current is None or id(current) in seen:
+            continue
+        seen.add(id(current))
+        try:
+            current.configure(cursor=cursor)
+        except Exception:
+            pass
+        if recursive:
+            try:
+                stack.extend(current.winfo_children())
+            except Exception:
+                pass
+
+
+def apply_cursor(window, target, direction: str | None) -> None:
+    cursor = cursor_for_direction(direction)
+    try:
+        window.configure(cursor=cursor)
+    except Exception:
+        pass
+    set_widget_cursor(target, cursor)
 
 
 def widget_point(window, event) -> tuple[int, int]:
     return event.x_root - window.winfo_rootx(), event.y_root - window.winfo_rooty()
+
+
+def control_widget_at_event(window, event):
+    try:
+        hit_widget = window.winfo_containing(event.x_root, event.y_root)
+        if is_control_widget(hit_widget):
+            return hit_widget
+    except Exception:
+        pass
+    if is_control_widget(event.widget):
+        return event.widget
+    return None
 
 
 def start_resize(window, event, direction: str) -> str:
@@ -93,17 +157,23 @@ def bind_drag_target(window, target) -> None:
         if getattr(window, "_is_resizing", False):
             return None
         try:
-            if is_control_widget(event.widget):
-                window.apply_cursor(None)
+            control_widget = control_widget_at_event(window, event)
+            if control_widget is not None:
+                apply_cursor(window, control_widget, None)
                 return None
             x, y = widget_point(window, event)
-            window.apply_cursor(window.get_resize_direction(x, y) or "move")
+            apply_cursor(window, event.widget, window.get_resize_direction(x, y) or "move")
         except Exception:
             pass
         return None
 
+    def on_leave(event):
+        if not getattr(window, "_is_resizing", False):
+            apply_cursor(window, event.widget, None)
+        return None
+
     def on_press(event):
-        if is_control_widget(event.widget):
+        if control_widget_at_event(window, event) is not None:
             return None
         x, y = widget_point(window, event)
         direction = window.get_resize_direction(x, y)
@@ -113,7 +183,7 @@ def bind_drag_target(window, target) -> None:
         return None
 
     def on_drag(event):
-        if is_control_widget(event.widget):
+        if control_widget_at_event(window, event) is not None:
             return None
         if getattr(window, "_is_resizing", False):
             return window.on_mouse_drag(event)
@@ -127,6 +197,7 @@ def bind_drag_target(window, target) -> None:
 
     try:
         target.bind("<Motion>", on_motion, add="+")
+        target.bind("<Leave>", on_leave, add="+")
         target.bind("<ButtonPress-1>", on_press, add="+")
         target.bind("<B1-Motion>", on_drag, add="+")
         target.bind("<ButtonRelease-1>", on_release, add="+")

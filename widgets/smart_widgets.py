@@ -21,6 +21,7 @@ except Exception:
     GPUtil = None
 
 from widgets.base_mini_widget import BaseMiniWidget
+from widgets.window_interactions import is_control_widget, set_widget_cursor
 from services.cleanup_service import CleanupService
 
 
@@ -146,7 +147,10 @@ class SmartWidgetBase(BaseMiniWidget):
 
     def _bind_widget_chrome(self, widget) -> None:
         try:
-            self._bind_drag_target(widget)
+            if is_control_widget(widget):
+                set_widget_cursor(widget, "arrow", recursive=True)
+            else:
+                self._bind_drag_target(widget)
             widget.bind("<Button-3>", self._show_context_menu, add="+")
             widget.bind("<Enter>", self._on_hover_enter, add="+")
             widget.bind("<Leave>", self._on_hover_leave, add="+")
