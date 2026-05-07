@@ -183,6 +183,11 @@ class OptiPCApp(ctk.CTk):
     def _on_main_configure(self, event) -> None:
         if event.widget is not self:
             return
+        try:
+            if self.state() == "withdrawn":
+                return
+        except Exception:
+            pass
         if self._main_geometry_after_id is not None:
             try:
                 self.after_cancel(self._main_geometry_after_id)
@@ -192,11 +197,20 @@ class OptiPCApp(ctk.CTk):
 
     def _save_main_geometry(self) -> None:
         self._main_geometry_after_id = None
+        try:
+            if self.state() == "withdrawn":
+                return
+        except Exception:
+            pass
+        width = self.winfo_width()
+        height = self.winfo_height()
+        if width < 800 or height < 500:
+            return
         self.widget_state_service.set_main_window_geometry(
             x=self.winfo_x(),
             y=self.winfo_y(),
-            width=self.winfo_width(),
-            height=self.winfo_height(),
+            width=width,
+            height=height,
         )
 
     def _widget_builders(self) -> dict[str, type]:

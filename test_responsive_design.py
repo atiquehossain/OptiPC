@@ -93,11 +93,16 @@ def test_widget_specs():
         if widget_accent_key("clock") != "clock_accent":
             print("FAIL: Clock accent is not centralized")
             return False
-        if widget_size_category("calendar") != "large":
-            print("FAIL: Calendar should default to large, not extra large")
-            return False
-        if widget_default_size("calendar") != WIDGET_SIZES["large"]:
-            print("FAIL: Calendar default size does not match the large preset")
+        for key in KNOWN_WIDGET_KEYS:
+            if widget_size_category(key) != "small":
+                print(f"FAIL: {key} is not using the standard small default size class")
+                return False
+            if widget_default_size(key) != WIDGET_SIZES["small"]:
+                print(f"FAIL: {key} default size does not match the small preset")
+                return False
+
+        if widget_size_category("calendar") != "small":
+            print("FAIL: Calendar should default to the same small size as other widgets")
             return False
 
         print("OK: Widget specs centralize default size and accent rules")
@@ -189,7 +194,8 @@ def test_legacy_default_size_migration():
                 (
                     '{"widgets":{"cpu":{"visible":true,"width":200,"height":200},'
                     '"network_speed":{"visible":true,"width":280,"height":210},'
-                    '"calendar":{"visible":true,"width":745,"height":376},'
+                    '"calendar":{"visible":true,"width":364,"height":376},'
+                    '"storage":{"visible":true,"width":316,"height":213},'
                     '"custom":{"visible":true,"width":333,"height":211}},'
                     '"main_window":{}}'
                 ),
@@ -199,28 +205,32 @@ def test_legacy_default_size_migration():
             cpu = service.get_widget_state("cpu")
             network_speed = service.get_widget_state("network_speed")
             calendar = service.get_widget_state("calendar")
+            storage = service.get_widget_state("storage")
             custom = service.get_widget_state("custom")
 
         if cpu.get("width") != WIDGET_SIZES["small"]["width"] or cpu.get("height") != WIDGET_SIZES["small"]["height"]:
             print("FAIL: Legacy small default size was not normalized")
             return False
         if (
-            network_speed.get("width") != WIDGET_SIZES["medium"]["width"]
-            or network_speed.get("height") != WIDGET_SIZES["medium"]["height"]
+            network_speed.get("width") != WIDGET_SIZES["small"]["width"]
+            or network_speed.get("height") != WIDGET_SIZES["small"]["height"]
         ):
-            print("FAIL: Legacy medium default size was not normalized")
+            print("FAIL: Legacy medium default size was not normalized to small")
             return False
         if (
-            calendar.get("width") != WIDGET_SIZES["large"]["width"]
-            or calendar.get("height") != WIDGET_SIZES["large"]["height"]
+            calendar.get("width") != WIDGET_SIZES["small"]["width"]
+            or calendar.get("height") != WIDGET_SIZES["small"]["height"]
         ):
-            print("FAIL: Legacy calendar default size was not normalized to large")
+            print("FAIL: Legacy calendar default size was not normalized to small")
+            return False
+        if storage.get("width") != WIDGET_SIZES["small"]["width"] or storage.get("height") != WIDGET_SIZES["small"]["height"]:
+            print("FAIL: Known custom-sized widget was not normalized to small")
             return False
         if custom.get("width") != 333 or custom.get("height") != 211:
             print("FAIL: Custom widget size was changed during migration")
             return False
 
-        print("OK: Legacy default sizes migrate by category without touching custom sizes")
+        print("OK: Legacy default sizes migrate to the uniform small default without touching custom sizes")
         return True
     except Exception as exc:
         print(f"FAIL: Legacy default size migration test error: {exc}")
@@ -515,6 +525,51 @@ def test_app_theme_change_refreshes_widgets():
         return False
 
 
+def test_main_geometry_skips_hidden_smoke_window():
+    """Test hidden smoke-test windows cannot overwrite normal main geometry."""
+    try:
+        import inspect
+
+        from app import OptiPCApp
+
+        configure_source = inspect.getsource(OptiPCApp._on_main_configure)
+        save_source = inspect.getsource(OptiPCApp._save_main_geometry)
+        if 'self.state() == "withdrawn"' not in configure_source:
+            print("FAIL: Main configure does not skip withdrawn windows")
+            return False
+        if 'self.state() == "withdrawn"' not in save_source:
+            print("FAIL: Main geometry save does not skip withdrawn windows")
+            return False
+        if "width < 800 or height < 500" not in save_source:
+            print("FAIL: Main geometry save does not reject tiny smoke-test geometry")
+            return False
+
+        print("OK: Main geometry save ignores hidden smoke-test windows")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Main geometry save guard test error: {exc}")
+        return False
+
+
+def test_smoke_test_restores_user_config():
+    """Test smoke tests restore user config files after launching hidden UI."""
+    try:
+        import inspect
+
+        import main as main_module
+
+        source = inspect.getsource(main_module.run_smoke_test)
+        if "_snapshot_config_files" not in source or "_restore_config_files" not in source:
+            print("FAIL: Smoke test does not snapshot and restore user config")
+            return False
+
+        print("OK: Smoke test restores user config files")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Smoke config restore test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -534,6 +589,8 @@ def main():
         ("Calendar Size Class Tests", test_calendar_size_classes),
         ("Widget Material Mode Tests", test_widget_material_modes),
         ("App Theme Widget Refresh Tests", test_app_theme_change_refreshes_widgets),
+        ("Main Geometry Smoke Guard Tests", test_main_geometry_skips_hidden_smoke_window),
+        ("Smoke Config Restore Tests", test_smoke_test_restores_user_config),
     ]
 
     passed = 0

@@ -5,13 +5,33 @@ Only selected actions (like SFC / DISM / CHKDSK) ask Windows for Administrator p
 """
 
 import sys
+from pathlib import Path
 
 from app import OptiPCApp
+
+
+def _snapshot_config_files() -> dict[Path, bytes | None]:
+    config_dir = Path.home() / "OptiPCConfig"
+    paths = [config_dir / "widget_state.json", config_dir / "app_settings.json"]
+    return {path: path.read_bytes() if path.exists() else None for path in paths}
+
+
+def _restore_config_files(snapshot: dict[Path, bytes | None]) -> None:
+    for path, data in snapshot.items():
+        try:
+            if data is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+        except Exception:
+            pass
 
 
 def run_smoke_test() -> int:
     """Start the packaged app, build key pages/widgets, and exit."""
     app = None
+    config_snapshot = _snapshot_config_files()
     try:
         app = OptiPCApp()
         app.withdraw()
@@ -33,6 +53,8 @@ def run_smoke_test() -> int:
             except Exception:
                 pass
         return 1
+    finally:
+        _restore_config_files(config_snapshot)
 
 
 if __name__ == "__main__":

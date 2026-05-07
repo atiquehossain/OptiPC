@@ -357,12 +357,14 @@ WIDGET_SIZES = {
     for key, value in WIDGET_SIZE_CLASSES.items()
 }
 
-WIDGET_DEFAULT_SIZE_VERSION = 6
+WIDGET_DEFAULT_SIZE_VERSION = 7
 LEGACY_WIDGET_DEFAULT_SIZES = {
     (200, 200),
     (170, 170),
     (280, 210),
+    (364, 170),
     (368, 170),
+    (364, 376),
     (320, 220),
     (320, 240),
     (400, 220),

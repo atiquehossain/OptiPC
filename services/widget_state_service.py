@@ -44,10 +44,18 @@ class WidgetStateService:
             return False
 
         changed = False
+        force_uniform_known_widgets = current_version < 7
         widgets = self._state.setdefault("widgets", {})
         if isinstance(widgets, dict):
             for key, widget in widgets.items():
                 if not isinstance(widget, dict):
+                    continue
+                if force_uniform_known_widgets and has_widget_spec(str(key)):
+                    target_size = widget_default_size(str(key))
+                    if widget.get("width") != int(target_size["width"]) or widget.get("height") != int(target_size["height"]):
+                        widget["width"] = int(target_size["width"])
+                        widget["height"] = int(target_size["height"])
+                        changed = True
                     continue
                 try:
                     size = (int(widget.get("width")), int(widget.get("height")))
