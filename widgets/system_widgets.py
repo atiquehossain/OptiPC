@@ -31,12 +31,14 @@ from widgets.calendar_responsive import (
     redraw_calendar_canvas,
 )
 from widgets.base_mini_widget import BaseMiniWidget
+from widgets.cpu_usage import CpuUsageSampler, format_cpu_percent
 from config.constants import FONT_SIZES
 
 
 class CPUWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 40):
         super().__init__(parent, x=x, y=y, widget_key="cpu")
+        self._cpu_sampler = CpuUsageSampler()
         self.percent_label = self.create_responsive_label(self.body, "0%", "metric", "bold")
         self.percent_label.pack(pady=(4, 2))
         self.detail_label = self.create_responsive_label(self.body, "Cores: 0", "body")
@@ -62,13 +64,13 @@ class CPUWidget(BaseMiniWidget):
     def update_stats(self) -> None:
         if not self._running:
             return
-        percent = psutil.cpu_percent(interval=None)
+        percent = self._cpu_sampler.sample()
         logical = psutil.cpu_count(logical=True) or 0
         physical = psutil.cpu_count(logical=False) or logical
         freq = psutil.cpu_freq()
         compact = self.widget_is_compact()
         freq_text = f"{freq.current:.0f} MHz" if compact and freq else f"Frequency: {freq.current:.0f} MHz" if freq else "Frequency: N/A"
-        self.percent_label.configure(text=f"{percent:.0f}%")
+        self.percent_label.configure(text=format_cpu_percent(percent))
         self.detail_label.configure(text=f"{physical}P / {logical}L cores" if compact else f"Cores: {physical} physical / {logical} logical")
         self.freq_label.configure(text=freq_text)
         if compact and self.freq_label.winfo_manager():

@@ -24,6 +24,7 @@ from config.widget_specs import widget_default_size, widget_spec
 from config.widget_style import widget_text_role
 from services.cleanup_service import CleanupService
 from widgets.base_mini_widget import BaseMiniWidget
+from widgets.cpu_usage import CpuUsageSampler, format_cpu_percent
 from widgets.responsive_layout import register_label, responsive_font_size, tk_font_weight
 from widgets.window_interactions import current_widget_geometry, is_control_widget, set_widget_cursor
 
@@ -417,6 +418,7 @@ class SmartWidgetBase(BaseMiniWidget):
 class PCHealthWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 80, theme_name: str | None = None):
         super().__init__(parent, None, "pc_health", x=x, y=y, theme_name=theme_name)
+        self._cpu_sampler = CpuUsageSampler()
         self.score_label = self.label(self.body, "0", role="hero")
         self.score_label.pack(anchor="w")
         self.status_label = self.label(self.body, "Checking system health", role="caption")
@@ -444,7 +446,7 @@ class PCHealthWidget(SmartWidgetBase):
     def update_stats(self) -> None:
         if not self._running:
             return
-        cpu = psutil.cpu_percent(interval=None)
+        cpu = self._cpu_sampler.sample()
         memory = psutil.virtual_memory()
         try:
             disk = psutil.disk_usage("C:\\")
@@ -486,13 +488,13 @@ class PCHealthWidget(SmartWidgetBase):
         compact = self.widget_is_compact()
         self.detail_label.configure(
             text=(
-                f"CPU {cpu:.0f}% | RAM {memory.percent:.0f}%"
+                f"CPU {format_cpu_percent(cpu)} | RAM {memory.percent:.0f}%"
                 if compact
-                else f"CPU {cpu:.0f}% | RAM {memory.percent:.0f}%\nDisk free {100 - disk.percent:.0f}% | Uptime {uptime_hours:.0f}h"
+                else f"CPU {format_cpu_percent(cpu)} | RAM {memory.percent:.0f}%\nDisk free {100 - disk.percent:.0f}% | Uptime {uptime_hours:.0f}h"
             )
         )
         self.warning_label.configure(text="" if compact else "; ".join(warnings[:2]) if warnings else "No urgent issues detected")
-        self.set_compact_text(f"{score} {status} | CPU {cpu:.0f}% RAM {memory.percent:.0f}%")
+        self.set_compact_text(f"{score} {status} | CPU {format_cpu_percent(cpu)} RAM {memory.percent:.0f}%")
         self.schedule_update(2000, self.update_stats)
 
 
@@ -1404,6 +1406,7 @@ class QuickActionsWidget(SmartWidgetBase):
 class PerformanceTimelineWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 1200, y: int = 80, theme_name: str | None = None):
         super().__init__(parent, None, "performance_timeline", x=x, y=y, theme_name=theme_name)
+        self._cpu_sampler = CpuUsageSampler()
         self.metric_label = self.label(self.body, "CPU 0% | RAM 0%", role="title")
         self.metric_label.pack(anchor="w", pady=(0, 8))
         self.cpu_history = deque([0.0] * 50, maxlen=50)
@@ -1418,12 +1421,12 @@ class PerformanceTimelineWidget(SmartWidgetBase):
     def update_stats(self) -> None:
         if not self._running:
             return
-        cpu = psutil.cpu_percent(interval=None)
+        cpu = self._cpu_sampler.sample()
         ram = psutil.virtual_memory().percent
         self.cpu_history.append(cpu)
         self.ram_history.append(ram)
-        self.metric_label.configure(text=f"CPU {cpu:.0f}% | RAM {ram:.0f}%")
-        self.set_compact_text(f"CPU {cpu:.0f}% | RAM {ram:.0f}%")
+        self.metric_label.configure(text=f"CPU {format_cpu_percent(cpu)} | RAM {ram:.0f}%")
+        self.set_compact_text(f"CPU {format_cpu_percent(cpu)} | RAM {ram:.0f}%")
         self._draw_timeline()
         self.schedule_update(1000, self.update_stats)
 

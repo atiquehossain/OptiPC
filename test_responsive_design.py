@@ -143,6 +143,35 @@ def test_widget_text_roles():
         return False
 
 
+def test_cpu_usage_helpers():
+    """Test CPU usage formatting keeps low activity visible."""
+    try:
+        from collections import namedtuple
+
+        from widgets.cpu_usage import cpu_percent_from_times, format_cpu_percent
+
+        Times = namedtuple("Times", "user system idle")
+        percent = cpu_percent_from_times(Times(1.0, 1.0, 8.0), Times(1.2, 1.1, 8.7))
+        if round(percent, 1) != 30.0:
+            print(f"FAIL: CPU sampler percent expected 30.0, got {percent:.1f}")
+            return False
+        if format_cpu_percent(0.4) != "0.4%":
+            print("FAIL: Low non-zero CPU activity rounded away")
+            return False
+        if format_cpu_percent(2.0) != "2.0%":
+            print("FAIL: Low CPU activity should show one decimal")
+            return False
+        if format_cpu_percent(35.4) != "35%":
+            print("FAIL: Normal CPU activity should keep compact integer formatting")
+            return False
+
+        print("OK: CPU helper keeps low activity visible")
+        return True
+    except Exception as exc:
+        print(f"FAIL: CPU helper test error: {exc}")
+        return False
+
+
 def test_responsive_fonts():
     """Test responsive font scaling."""
     try:
@@ -624,6 +653,7 @@ def main():
         ("Widget Size Tests", test_widget_sizes),
         ("Widget Spec Tests", test_widget_specs),
         ("Widget Text Role Tests", test_widget_text_roles),
+        ("CPU Usage Helper Tests", test_cpu_usage_helpers),
         ("Responsive Font Tests", test_responsive_fonts),
         ("Widget Size Limit Tests", test_widget_size_limits),
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),
