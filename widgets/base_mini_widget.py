@@ -3,7 +3,12 @@ from __future__ import annotations
 import customtkinter as ctk
 
 from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
-from widgets.native_window_effects import apply_native_window_effect, apply_rounded_window_region
+from widgets.native_window_effects import (
+    TRANSPARENT_WINDOW_COLOR,
+    apply_native_window_effect,
+    apply_rounded_window_region,
+    apply_transparent_color_key,
+)
 from widgets.window_interactions import (
     bind_drag_target,
     clamp_resize_geometry,
@@ -156,9 +161,13 @@ class BaseMiniWidget(ctk.CTkToplevel):
 
     def _apply_base_theme(self) -> None:
         self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["dark"])
-        self.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
+        self.configure(fg_color=TRANSPARENT_WINDOW_COLOR)
         self.attributes("-alpha", self.theme.get("alpha", 1.0))
-        self.container.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
+        apply_transparent_color_key(self)
+        self.container.configure(
+            fg_color=self.theme.get("container", self.theme["window_bg"]),
+            bg_color=TRANSPARENT_WINDOW_COLOR,
+        )
         self.title_label.configure(text_color=self.theme["text"])
         self.close_button.configure(
             fg_color=self.theme["button"],

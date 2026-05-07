@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import customtkinter as ctk
 from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
-from widgets.native_window_effects import apply_rounded_window_region
+from widgets.native_window_effects import (
+    TRANSPARENT_WINDOW_COLOR,
+    apply_rounded_window_region,
+    apply_transparent_color_key,
+)
 from widgets.window_interactions import (
     bind_drag_target,
     clamp_resize_geometry,
@@ -37,6 +41,7 @@ class ModernWidgetCard(ctk.CTkFrame):
             width=width,
             height=height,
             fg_color=self.theme["container"],
+            bg_color=TRANSPARENT_WINDOW_COLOR,
             border_width=1,
             border_color=self.theme.get("border", "transparent"),
             **kwargs
@@ -51,6 +56,7 @@ class ModernWidgetCard(ctk.CTkFrame):
         # For now, we simulate with border and transparency
         self.configure(
             fg_color=self.theme["container"],
+            bg_color=TRANSPARENT_WINDOW_COLOR,
             border_color=self.theme.get("border", "transparent")
         )
 
@@ -215,13 +221,15 @@ class ModernMiniWidget(ctk.CTkToplevel):
 
     def _apply_base_theme(self) -> None:
         self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"])
-        self.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
+        self.configure(fg_color=TRANSPARENT_WINDOW_COLOR)
         self.attributes("-alpha", self.theme.get("alpha", 0.98))
+        apply_transparent_color_key(self)
         
         # Update container styling
         if hasattr(self, 'container'):
             self.container.configure(
                 fg_color=self.theme.get("container", self.theme["window_bg"]),
+                bg_color=TRANSPARENT_WINDOW_COLOR,
                 border_color=self.theme.get("border", "transparent")
             )
         

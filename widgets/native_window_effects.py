@@ -10,6 +10,7 @@ ACCENT_ENABLE_BLURBEHIND = 3
 ACCENT_ENABLE_ACRYLICBLURBEHIND = 4
 WCA_ACCENT_POLICY = 19
 DWM_BB_ENABLE = 0x00000001
+TRANSPARENT_WINDOW_COLOR = "#010203"
 
 
 class ACCENT_POLICY(ctypes.Structure):
@@ -114,6 +115,17 @@ def apply_native_window_effect(window, *, enabled: bool, tint: str = "#202020", 
     if _set_composition(hwnd, ACCENT_ENABLE_BLURBEHIND, tint, alpha):
         return True
     return _set_dwm_blur(hwnd, True)
+
+
+def apply_transparent_color_key(window, color: str = TRANSPARENT_WINDOW_COLOR) -> bool:
+    """Make a Tk top-level color fully transparent on Windows."""
+    if not is_windows():
+        return False
+    try:
+        window.attributes("-transparentcolor", color)
+        return True
+    except Exception:
+        return False
 
 
 def apply_rounded_window_region(window, *, radius: int = 24) -> bool:

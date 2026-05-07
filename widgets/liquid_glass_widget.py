@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import customtkinter as ctk
 from config.constants import WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
-from widgets.native_window_effects import apply_native_window_effect, apply_rounded_window_region
+from widgets.native_window_effects import (
+    TRANSPARENT_WINDOW_COLOR,
+    apply_native_window_effect,
+    apply_rounded_window_region,
+    apply_transparent_color_key,
+)
 from widgets.window_interactions import (
     bind_drag_target,
     clamp_resize_geometry,
@@ -37,6 +42,7 @@ class GlassWidgetCard(ctk.CTkFrame):
             width=width,
             height=height,
             fg_color=self.theme["container"],  # Semi-transparent background
+            bg_color=TRANSPARENT_WINDOW_COLOR,
             border_width=1,
             border_color=self.theme.get("border", "transparent"),
             **kwargs
@@ -51,6 +57,7 @@ class GlassWidgetCard(ctk.CTkFrame):
         # Set up the glass appearance
         self.configure(
             fg_color=self.theme["container"],  # Semi-transparent
+            bg_color=TRANSPARENT_WINDOW_COLOR,
             border_color=self.theme.get("border", "transparent")
         )
         
@@ -277,8 +284,9 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
     def _apply_base_theme(self) -> None:
         self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"])
-        self.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
+        self.configure(fg_color=TRANSPARENT_WINDOW_COLOR)
         self.attributes("-alpha", self.theme.get("alpha", 0.98))
+        apply_transparent_color_key(self)
         
         # Update glass container
         if hasattr(self, 'container'):
@@ -297,7 +305,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.after(0, self._apply_window_shape)
 
     def _apply_native_glass_effect(self) -> None:
-        enabled = self.current_theme_name == "glass"
+        enabled = False
         alpha = 165
         try:
             apply_native_window_effect(
