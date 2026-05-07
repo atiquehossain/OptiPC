@@ -12,6 +12,7 @@ ACCENT_KEYS = (
     "calendar_accent",
     "clock_accent",
     "runtime_accent",
+    "bluetooth_accent",
 )
 
 WIDGET_COLOR_MODE_LABELS = {

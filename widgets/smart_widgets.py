@@ -895,6 +895,246 @@ class NetworkQualityWidget(SmartWidgetBase):
         self.set_compact_text(label)
 
 
+class BluetoothWidget(SmartWidgetBase):
+    """Bluetooth status widget with Apple-style activity rings."""
+
+    _DEVICE_EXCLUDE_TOKENS = (
+        "adapter",
+        "enumerator",
+        "generic access",
+        "generic attribute",
+        "microsoft bluetooth",
+        "protocol",
+        "radio",
+        "rfcomm",
+        "service",
+        "transport",
+        "wireless bluetooth",
+    )
+    _AUDIO_TOKENS = (
+        "a2dp",
+        "airpod",
+        "audio",
+        "avrcp",
+        "buds",
+        "ear",
+        "hands-free",
+        "handsfree",
+        "headphone",
+        "headset",
+        "speaker",
+        "sound",
+    )
+
+    def __init__(self, parent, x: int = 1200, y: int = 360, theme_name: str | None = None):
+        super().__init__(parent, None, "bluetooth", x=x, y=y, theme_name=theme_name)
+        self._probe_running = False
+        self._last_probe_at = 0.0
+        self._bluetooth_snapshot = {
+            "available": False,
+            "radio_active": False,
+            "connected_count": 0,
+            "device_count": 0,
+            "audio_active": False,
+            "summary": "Checking Bluetooth",
+        }
+        self.ring_canvas = tk.Canvas(self.body, bg=self.theme["panel"], highlightthickness=0, bd=0)
+        self._theme_canvases.append(self.ring_canvas)
+        self.ring_canvas.pack(fill="both", expand=True)
+        self.ring_canvas.bind("<Configure>", lambda _event: self._draw_rings(), add="+")
+        self._bind_widget_chrome(self.ring_canvas)
+        self.apply_theme()
+        self.update_stats()
+
+    def refresh_theme(self) -> None:
+        super().refresh_theme()
+        canvas = getattr(self, "ring_canvas", None)
+        if canvas is not None:
+            canvas.configure(bg=self.theme["panel"])
+            self._draw_rings()
+
+    def _build_context_menu(self) -> None:
+        super()._build_context_menu()
+        self._context_menu.insert_separator(0)
+        self._context_menu.insert_command(0, label="Open Bluetooth Settings", command=self.open_bluetooth_settings)
+
+    def open_bluetooth_settings(self) -> None:
+        action_service = getattr(self.master, "action_service", None)
+        if action_service is not None:
+            action_service.open_target("ms-settings:bluetooth")
+
+    def update_stats(self) -> None:
+        if not self._running:
+            return
+        now = time.time()
+        if not self._probe_running and now - self._last_probe_at >= 8:
+            self._probe_running = True
+            self._last_probe_at = now
+            threading.Thread(target=self._probe_bluetooth, daemon=True).start()
+        self._draw_rings()
+        self.set_compact_text(str(self._bluetooth_snapshot.get("summary") or "Bluetooth"))
+        self.schedule_update(1500, self.update_stats)
+
+    def _probe_bluetooth(self) -> None:
+        snapshot = self._read_bluetooth_snapshot()
+        self.ui_after(lambda: self._show_bluetooth_snapshot(snapshot))
+
+    def _show_bluetooth_snapshot(self, snapshot: dict[str, object]) -> None:
+        self._probe_running = False
+        self._bluetooth_snapshot = snapshot
+        self.set_compact_text(str(snapshot.get("summary") or "Bluetooth"))
+        self._draw_rings()
+
+    def _read_bluetooth_snapshot(self) -> dict[str, object]:
+        script = r"""
+$items = @(Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
+    Where-Object { $_.FriendlyName } |
+    Select-Object FriendlyName, Status, Class, InstanceId)
+$service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -First 1 Status
+[pscustomobject]@{
+    Items = $items
+    ServiceStatus = if ($service) { [string]$service.Status } else { $null }
+} | ConvertTo-Json -Compress -Depth 4
+"""
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=8,
+            )
+            raw = result.stdout.strip()
+            data = json.loads(raw) if raw else {}
+            items = data.get("Items", []) if isinstance(data, dict) else []
+            if isinstance(items, dict):
+                items = [items]
+            entries = [item for item in items if isinstance(item, dict)]
+            service_status = str(data.get("ServiceStatus") or "").lower() if isinstance(data, dict) else ""
+            return self._summarize_bluetooth_entries(entries, service_status)
+        except Exception:
+            return {
+                "available": False,
+                "radio_active": False,
+                "connected_count": 0,
+                "device_count": 0,
+                "audio_active": False,
+                "summary": "Bluetooth unavailable",
+            }
+
+    def _summarize_bluetooth_entries(self, entries: list[dict], service_status: str) -> dict[str, object]:
+        ok_entries = [entry for entry in entries if str(entry.get("Status") or "").strip().lower() == "ok"]
+        device_entries = [entry for entry in entries if self._is_device_candidate(str(entry.get("FriendlyName") or ""))]
+        connected_entries = [
+            entry for entry in device_entries if str(entry.get("Status") or "").strip().lower() == "ok"
+        ]
+        audio_active = any(
+            any(token in str(entry.get("FriendlyName") or "").lower() for token in self._AUDIO_TOKENS)
+            for entry in ok_entries
+        )
+        available = bool(entries) or service_status == "running"
+        radio_active = bool(ok_entries) or service_status == "running"
+        connected_count = len(connected_entries)
+        device_count = len(device_entries)
+        if radio_active and connected_count:
+            summary = f"Bluetooth on | {connected_count} connected"
+        elif radio_active:
+            summary = "Bluetooth on | no devices"
+        elif available:
+            summary = "Bluetooth idle"
+        else:
+            summary = "Bluetooth unavailable"
+        return {
+            "available": available,
+            "radio_active": radio_active,
+            "connected_count": connected_count,
+            "device_count": device_count,
+            "audio_active": audio_active,
+            "summary": summary,
+        }
+
+    def _is_device_candidate(self, name: str) -> bool:
+        lower = name.lower().strip()
+        return bool(lower) and not any(token in lower for token in self._DEVICE_EXCLUDE_TOKENS)
+
+    def _ring_model(self) -> list[dict[str, object]]:
+        snapshot = self._bluetooth_snapshot
+        radio_active = bool(snapshot.get("radio_active"))
+        available = bool(snapshot.get("available"))
+        connected_count = int(snapshot.get("connected_count") or 0)
+        device_count = int(snapshot.get("device_count") or 0)
+        audio_active = bool(snapshot.get("audio_active"))
+        devices_progress = min(1.0, 0.25 + (connected_count * 0.25)) if connected_count else (0.16 if device_count else 0.0)
+        return [
+            {"icon": "phone", "active": radio_active, "progress": 0.68 if radio_active else (0.18 if available else 0.0)},
+            {"icon": "watch", "active": radio_active and connected_count > 0, "progress": devices_progress},
+            {"icon": "headphones", "active": audio_active, "progress": 0.78 if audio_active else (0.28 if connected_count else 0.0)},
+            {"icon": "empty", "active": False, "progress": 0.0},
+        ]
+
+    def _draw_rings(self) -> None:
+        canvas = getattr(self, "ring_canvas", None)
+        if canvas is None:
+            return
+        canvas.delete("all")
+        width = max(int(canvas.winfo_width()), 120)
+        height = max(int(canvas.winfo_height()), 120)
+        panel = self.theme.get("panel", "#1f1f22")
+        canvas.create_rectangle(0, 0, width, height, fill=panel, outline="")
+        cell_w = width / 2.0
+        cell_h = height / 2.0
+        radius = max(21, min(cell_w, cell_h) * 0.34)
+        centers = [
+            (cell_w * 0.5, cell_h * 0.5),
+            (cell_w * 1.5, cell_h * 0.5),
+            (cell_w * 0.5, cell_h * 1.5),
+            (cell_w * 1.5, cell_h * 1.5),
+        ]
+        for center, item in zip(centers, self._ring_model(), strict=False):
+            self._draw_ring(canvas, center[0], center[1], radius, item)
+
+    def _draw_ring(self, canvas: tk.Canvas, cx: float, cy: float, radius: float, item: dict[str, object]) -> None:
+        active = bool(item.get("active"))
+        progress = max(0.0, min(float(item.get("progress") or 0.0), 1.0))
+        ring_width = max(5, int(radius * 0.18))
+        track = self.theme.get("progress_track", "#3a3a3f")
+        inactive = self.theme.get("muted", "#8e8e93")
+        active_color = self.widget_accent_color("#30d158")
+        track_color = track if active or progress > 0 else inactive
+        bbox = (cx - radius, cy - radius, cx + radius, cy + radius)
+        canvas.create_oval(*bbox, outline=track_color, width=ring_width)
+        if progress > 0:
+            color = active_color if active else self._muted_ring_color()
+            canvas.create_arc(*bbox, start=92, extent=-max(10, int(progress * 360)), style="arc", outline=color, width=ring_width)
+        self._draw_icon(canvas, str(item.get("icon") or ""), cx, cy, radius * 0.55, active)
+
+    def _muted_ring_color(self) -> str:
+        mode = str(self.theme.get("material_mode", "full_color"))
+        if mode == "monochrome":
+            return self.theme.get("muted", "#8e8e93")
+        return self.theme.get("muted", "#8e8e93")
+
+    def _draw_icon(self, canvas: tk.Canvas, icon: str, cx: float, cy: float, size: float, active: bool) -> None:
+        color = self.theme.get("text", "#ffffff") if active else self.theme.get("muted", "#a8a8ad")
+        width = max(2, int(size * 0.12))
+        if icon == "phone":
+            x0, y0, x1, y1 = cx - size * 0.34, cy - size * 0.52, cx + size * 0.34, cy + size * 0.52
+            canvas.create_rectangle(x0, y0, x1, y1, outline=color, width=width)
+            canvas.create_line(cx - size * 0.18, y1 - size * 0.14, cx + size * 0.18, y1 - size * 0.14, fill=color, width=width)
+        elif icon == "watch":
+            x0, y0, x1, y1 = cx - size * 0.38, cy - size * 0.38, cx + size * 0.38, cy + size * 0.38
+            canvas.create_rectangle(x0, y0, x1, y1, outline=color, width=width)
+            canvas.create_line(cx - size * 0.2, y0, cx - size * 0.2, y0 - size * 0.24, fill=color, width=width)
+            canvas.create_line(cx + size * 0.2, y0, cx + size * 0.2, y0 - size * 0.24, fill=color, width=width)
+            canvas.create_line(cx - size * 0.2, y1, cx - size * 0.2, y1 + size * 0.24, fill=color, width=width)
+            canvas.create_line(cx + size * 0.2, y1, cx + size * 0.2, y1 + size * 0.24, fill=color, width=width)
+        elif icon == "headphones":
+            canvas.create_arc(cx - size * 0.58, cy - size * 0.48, cx + size * 0.58, cy + size * 0.6, start=20, extent=140, style="arc", outline=color, width=width)
+            canvas.create_rectangle(cx - size * 0.62, cy + size * 0.03, cx - size * 0.38, cy + size * 0.48, outline=color, width=width)
+            canvas.create_rectangle(cx + size * 0.38, cy + size * 0.03, cx + size * 0.62, cy + size * 0.48, outline=color, width=width)
+
+
 class WindowsUpdateWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 640, theme_name: str | None = None):
         super().__init__(parent, None, "windows_update", x=x, y=y, theme_name=theme_name)

@@ -48,6 +48,7 @@ from widgets.liquid_glass_widgets import (
 )
 from widgets.smart_widgets import (
     BatteryHealthWidget,
+    BluetoothWidget,
     DiskIOWidget,
     NetworkQualityWidget,
     PCHealthWidget,
@@ -220,6 +221,7 @@ class OptiPCApp(ctk.CTk):
             "pc_health": PCHealthWidget,
             "top_processes": TopProcessesWidget,
             "battery_health": BatteryHealthWidget,
+            "bluetooth": BluetoothWidget,
             "storage_cleanup": StorageCleanupWidget,
             "disk_io": DiskIOWidget,
             "network_quality": NetworkQualityWidget,
@@ -660,6 +662,9 @@ class OptiPCApp(ctk.CTk):
 
     def toggle_battery_health_widget(self) -> None:
         self._toggle_widget("battery_health")
+
+    def toggle_bluetooth_widget(self) -> None:
+        self._toggle_widget("bluetooth")
 
     def toggle_storage_cleanup_widget(self) -> None:
         self._toggle_widget("storage_cleanup")

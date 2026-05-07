@@ -94,6 +94,7 @@ class DashboardPage(BasePage):
 
         # Smart Widgets Row 4
         self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Timeline Widget']} Timeline", lambda: self._open_widget("toggle_performance_timeline_widget", "Timeline Widget")).grid(row=7, column=0, padx=6, pady=6, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Bluetooth Widget']} Bluetooth", lambda: self._open_widget("toggle_bluetooth_widget", "Bluetooth Widget")).grid(row=7, column=1, padx=6, pady=6, sticky="ew")
         # Live CPU Monitor
         live_card = self.make_card(wrapper, f"{DASHBOARD_ICONS['Live CPU Monitor']} Live CPU Monitor", "Real-time CPU performance monitoring")
         live_card.grid(row=1, column=1, padx=8, pady=8, sticky="nsew")

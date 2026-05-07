@@ -39,6 +39,7 @@ _WIDGET_SPECS: dict[str, WidgetSpec] = {
     "disk_io": WidgetSpec("disk_io", "Disk I/O", "small", "storage_accent", "chart"),
     "network_quality": WidgetSpec("network_quality", "Network Quality", "small", "accent", "action"),
     "windows_update": WidgetSpec("windows_update", "Windows Update", "small", "runtime_accent", "action"),
+    "bluetooth": WidgetSpec("bluetooth", "Bluetooth", "small", "bluetooth_accent", "rings"),
     "storage": WidgetSpec("storage", "Storage", "small", "storage_accent", "meter"),
     "partitions": WidgetSpec("partitions", "Partitions", "small", "storage_accent", "list"),
     "calendar": WidgetSpec("calendar", "Calendar", "small", "calendar_accent", "calendar"),

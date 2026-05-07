@@ -80,6 +80,7 @@ def test_widget_specs():
             "clock",
             "calendar",
             "storage",
+            "bluetooth",
             "top_processes",
             "network_speed",
         }
@@ -92,6 +93,9 @@ def test_widget_specs():
             return False
         if widget_accent_key("clock") != "clock_accent":
             print("FAIL: Clock accent is not centralized")
+            return False
+        if widget_accent_key("bluetooth") != "bluetooth_accent":
+            print("FAIL: Bluetooth accent is not centralized")
             return False
         for key in KNOWN_WIDGET_KEYS:
             if widget_size_category(key) != "small":
@@ -476,7 +480,10 @@ def test_widget_material_modes():
         if full_color["cpu_accent"] == full_color["ram_accent"]:
             print("FAIL: Full color mode flattened widget accent colors")
             return False
-        if monochrome["cpu_accent"] != monochrome["ram_accent"]:
+        if full_color["bluetooth_accent"] == full_color["cpu_accent"]:
+            print("FAIL: Bluetooth full color accent was not preserved")
+            return False
+        if monochrome["cpu_accent"] != monochrome["ram_accent"] or monochrome["bluetooth_accent"] != monochrome["cpu_accent"]:
             print("FAIL: Monochrome mode did not flatten accent colors")
             return False
         if automatic_idle["material_mode"] != "monochrome":

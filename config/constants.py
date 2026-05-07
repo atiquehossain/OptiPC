@@ -210,6 +210,7 @@ NAVIGATION_ICONS = {
 
 # Dashboard Icons
 DASHBOARD_ICONS = {
+    "Bluetooth Widget": "BT",
     "CPU Usage": "💻",
     "RAM Total": "🧠",
     "Disk Free": "💾",
@@ -252,6 +253,7 @@ WIDGET_THEMES = {
         "button": "#313a46",
         "button_hover": "#405063",
         "progress_track": "#1f2630",
+        "bluetooth_accent": "#30d158",
         "alpha": 1.0,
     },
     "light": {
@@ -264,6 +266,7 @@ WIDGET_THEMES = {
         "button": "#dfe7f0",
         "button_hover": "#d2dde8",
         "progress_track": "#d6dee8",
+        "bluetooth_accent": "#24a35a",
         "alpha": 1.0,
     },
     "glass": {
@@ -276,6 +279,7 @@ WIDGET_THEMES = {
         "button": "#363639",
         "button_hover": "#46464a",
         "progress_track": "#3a3a3f",
+        "bluetooth_accent": "#30d158",
         "alpha": 0.96,
         "border": "#4c4c52",
         "edge_highlight": "#ffffff",
@@ -308,6 +312,7 @@ WIDGET_THEMES = {
         "calendar_accent": "#ff3b30",
         "clock_accent": "#007aff",
         "runtime_accent": "#8e8e93",
+        "bluetooth_accent": "#24a35a",
     },
     "modern_dark": {
         "window_bg": "#050506",
@@ -333,6 +338,7 @@ WIDGET_THEMES = {
         "calendar_accent": "#ff453a",
         "clock_accent": "#0a84ff",
         "runtime_accent": "#a8a8ad",
+        "bluetooth_accent": "#30d158",
     },
 }
 
