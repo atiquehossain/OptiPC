@@ -23,7 +23,7 @@ except Exception:
 from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH
 from services.cleanup_service import CleanupService
 from widgets.base_mini_widget import BaseMiniWidget
-from widgets.window_interactions import is_control_widget, set_widget_cursor
+from widgets.window_interactions import current_widget_geometry, is_control_widget, set_widget_cursor
 
 
 class SmartWidgetBase(BaseMiniWidget):
@@ -39,7 +39,7 @@ class SmartWidgetBase(BaseMiniWidget):
         y: int = 80,
         theme_name: str | None = None,
     ) -> None:
-        self._theme_labels: list[tuple[ctk.CTkLabel, str]] = []
+        self._theme_labels: list[tuple[ctk.CTkLabel, str, int, str]] = []
         self._theme_panels: list[ctk.CTkFrame] = []
         self._theme_buttons: list[ctk.CTkButton] = []
         self._theme_progress: list[ctk.CTkProgressBar] = []
@@ -52,7 +52,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self._is_compact = False
         self._latest_compact_text = ""
         self._scheduled_after_ids: set[str] = set()
-        self.MIN_WIDTH = max(300, int(width * 0.82))
+        self.MIN_WIDTH = max(260, int(width * 0.82))
         self.MIN_HEIGHT = max(210, int(height * 0.84))
         self.MAX_WIDTH = max(width + 120, int(width * 1.45))
         self.MAX_HEIGHT = max(height + 90, int(height * 1.35))
@@ -69,8 +69,9 @@ class SmartWidgetBase(BaseMiniWidget):
             text_color=self.theme.get(color, self.theme["text"]),
             wraplength=max(90, self._default_width - 36),
             justify="left",
+            anchor="w",
         )
-        self._theme_labels.append((label, color))
+        self._theme_labels.append((label, color, size, weight))
         self._bind_widget_chrome(label)
         return label
 
@@ -255,6 +256,31 @@ class SmartWidgetBase(BaseMiniWidget):
         self._latest_compact_text = clean_text
         self.compact_label.configure(text=clean_text if self._is_compact else "")
 
+    def _scaled_label_size(self, base_size: int) -> int:
+        try:
+            width_ratio = max(0.1, self.winfo_width() / max(1, self._default_width))
+            height_ratio = max(0.1, self.winfo_height() / max(1, self._default_height))
+            scale = max(0.78, min(1.12, min(width_ratio, height_ratio)))
+            return max(8, int(round(base_size * scale)))
+        except Exception:
+            return base_size
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        wraplength = max(80, self.winfo_width() - 36)
+        try:
+            self.compact_label.configure(wraplength=max(80, self.winfo_width() - 140))
+        except Exception:
+            pass
+        for label, _color, size, weight in self._theme_labels:
+            try:
+                label.configure(
+                    wraplength=wraplength,
+                    font=ctk.CTkFont(size=self._scaled_label_size(size), weight=weight),
+                )
+            except Exception:
+                pass
+
     def schedule_update(self, delay_ms: int, callback: Callable[[], None]) -> None:
         if not self._running:
             return
@@ -301,7 +327,7 @@ class SmartWidgetBase(BaseMiniWidget):
             )
         for panel in self._theme_panels:
             panel.configure(fg_color=self.theme["panel"])
-        for label, color in self._theme_labels:
+        for label, color, _size, _weight in self._theme_labels:
             label.configure(text_color=self.theme.get(color, self.theme["text"]))
         for button in self._theme_buttons:
             button.configure(
@@ -438,17 +464,45 @@ class TopProcessesWidget(SmartWidgetBase):
         self._tracked_processes: dict[int, psutil.Process] = {}
         self.summary_label = self.label(self.body, "Ranking by sampled CPU, then RAM", size=11, color="muted")
         self.summary_label.pack(anchor="w", pady=(0, 8))
-        for _ in range(3):
+        for _ in range(2):
             row = self.label(self.body, "", size=12, color="text")
             row.pack(anchor="w", fill="x", pady=2)
             self.rows.append(row)
-        self.button(self.body, "Open Task Manager", lambda: self.master.action_service.open_target("taskmgr")).pack(fill="x", pady=(10, 0))
+        self.task_manager_button = self.button(self.body, "Open Task Manager", lambda: self.master.action_service.open_target("taskmgr"))
+        self.task_manager_button.pack(fill="x", pady=(10, 0))
         self.apply_theme()
         self._seed_process_cpu_samples()
         for row in self.rows:
             row.configure(text="Sampling CPU usage...")
         self.set_compact_text("Sampling CPU usage")
         self.schedule_update(900, self.update_stats)
+
+    @staticmethod
+    def _shorten_process_name(name: str, limit: int) -> str:
+        clean_name = " ".join(str(name).split()) or "Unknown"
+        if len(clean_name) <= limit:
+            return clean_name
+        return clean_name[: max(1, limit - 3)].rstrip() + "..."
+
+    def _format_process_row(self, name: str, cpu: float, memory: float) -> str:
+        _x, _y, width, _height = current_widget_geometry(self)
+        if width < 310:
+            return f"{self._shorten_process_name(name, 14)}  CPU {cpu:.0f}%"
+        if width < 370:
+            return f"{self._shorten_process_name(name, 16)}  CPU {cpu:.0f}%  RAM {memory:.1f}%"
+        return f"{self._shorten_process_name(name, 22)}  CPU {cpu:.1f}%  RAM {memory:.1f}%"
+
+    def _update_responsive_layout(self) -> None:
+        super()._update_responsive_layout()
+        compact_height = self.winfo_height() < 230
+        try:
+            if compact_height and self.summary_label.winfo_manager():
+                self.summary_label.pack_forget()
+            elif not compact_height and not self.summary_label.winfo_manager():
+                self.summary_label.pack(anchor="w", before=self.rows[0], pady=(0, 8))
+            self.task_manager_button.pack_configure(pady=(6 if compact_height else 10, 0))
+        except Exception:
+            pass
 
     def _seed_process_cpu_samples(self) -> None:
         for proc in psutil.process_iter(["pid"]):
@@ -485,7 +539,7 @@ class TopProcessesWidget(SmartWidgetBase):
                 row.configure(text="")
                 continue
             cpu, memory, pid, name = processes[index]
-            row.configure(text=f"{name[:20]:20} CPU {cpu:4.1f}%  RAM {memory:4.1f}%")
+            row.configure(text=self._format_process_row(name, cpu, memory))
         if processes:
             top_cpu, top_memory, _pid, top_name = processes[0]
             self.set_compact_text(f"{top_name[:18]} CPU {top_cpu:.0f}% RAM {top_memory:.1f}%")

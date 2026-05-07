@@ -278,6 +278,7 @@ class CalendarWidget(BaseMiniWidget):
             command=self.previous_month
         )
         self.prev_btn.pack(side="left", padx=(0, 8))
+        self.prev_btn.configure(text="<")
         
         # Month/Year label
         self.month_label = self.create_responsive_label(
@@ -297,6 +298,7 @@ class CalendarWidget(BaseMiniWidget):
             command=self.next_month
         )
         self.next_btn.pack(side="left", padx=(8, 0))
+        self.next_btn.configure(text=">")
         
         # Today button
         self.today_btn = ctk.CTkButton(
@@ -364,13 +366,23 @@ class CalendarWidget(BaseMiniWidget):
             return
         try:
             compact = self.winfo_height() < 300
-            self.nav_frame.pack_configure(pady=(4, 3) if compact else (8, 4))
-            self.calendar_frame.pack_configure(padx=4, pady=(3, 6) if compact else (8, 12))
-            button_size = 24 if compact else 30
+            very_compact = compact and (self.winfo_height() < 240 or self.winfo_width() < 300)
+            self.nav_frame.pack_configure(pady=(2, 2) if very_compact else (4, 3) if compact else (8, 4))
+            self.calendar_frame.pack_configure(padx=0 if very_compact else 4, pady=(2, 4) if very_compact else (3, 6) if compact else (8, 12))
+            button_size = 22 if very_compact else 24 if compact else 30
             self.prev_btn.configure(width=button_size, height=button_size)
             self.next_btn.configure(width=button_size, height=button_size)
-            self.today_btn.configure(width=56 if compact else 60, height=button_size)
-            self.month_label.configure(wraplength=max(74, self.winfo_width() - 160))
+            side_pad = 2 if very_compact else 4 if compact else 8
+            self.prev_btn.pack_configure(padx=(0, side_pad))
+            self.next_btn.pack_configure(padx=(side_pad, 0))
+            self.today_btn.pack_configure(padx=(side_pad, 0))
+            self.today_btn.configure(
+                text="T" if very_compact else "Tdy" if compact else "Today",
+                width=32 if very_compact else 44 if compact else 60,
+                height=button_size,
+                font=ctk.CTkFont(size=9 if very_compact else 10 if compact else self.get_responsive_font_size("body"), weight="bold"),
+            )
+            self.month_label.configure(wraplength=max(70, self.winfo_width() - (126 if very_compact else 160)))
         except Exception:
             pass
         apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(4, 8))

@@ -52,6 +52,12 @@ from widgets.smart_widgets import (
     WindowsUpdateWidget,
 )
 from widgets.toast import ToastManager
+from widgets.window_interactions import (
+    current_widget_geometry,
+    effective_window_size,
+    find_non_overlapping_position,
+    get_virtual_screen_bounds,
+)
 
 
 class OptiPCApp(ctk.CTk):
@@ -249,12 +255,101 @@ class OptiPCApp(ctk.CTk):
 
     def get_widget_initial_geometry(self, key: str, *, x: int, y: int, width: int, height: int) -> dict[str, int]:
         state = self.widget_state_service.get_widget_state(key)
-        return {
+        geometry = {
             "x": int(state.get("x", x)),
             "y": int(state.get("y", y)),
             "width": int(state.get("width", width)),
             "height": int(state.get("height", height)),
         }
+        geometry["x"], geometry["y"] = self._non_overlapping_widget_position(
+            key,
+            geometry["x"],
+            geometry["y"],
+            geometry["width"],
+            geometry["height"],
+        )
+        return geometry
+
+    def _visible_widget_rects(self, exclude_key: str | None = None) -> list[tuple[int, int, int, int]]:
+        seen: set[tuple[int, int, int, int]] = set()
+        live_keys: set[str] = set()
+        rects: list[tuple[int, int, int, int]] = []
+        for key, widget in self.widgets.items():
+            if key == exclude_key or widget is None:
+                continue
+            try:
+                saved_visible = self.widget_state_service.get_widget_state(key).get("visible", False)
+                if not widget.winfo_exists() or (widget.state() == "withdrawn" and not saved_visible):
+                    continue
+                rect = self._widget_window_rect(widget)
+                if rect not in seen:
+                    rects.append(rect)
+                    seen.add(rect)
+                live_keys.add(key)
+            except Exception:
+                continue
+        for key, state in self.widget_state_service.get_all_widget_states().items():
+            if key == exclude_key or key in live_keys or not state.get("visible", False):
+                continue
+            try:
+                rect = (
+                    int(state["x"]),
+                    int(state["y"]),
+                    *self._effective_widget_size(max(1, int(state["width"])), max(1, int(state["height"]))),
+                )
+            except Exception:
+                continue
+            if rect not in seen:
+                rects.append(rect)
+                seen.add(rect)
+        return rects
+
+    @staticmethod
+    def _widget_window_rect(widget) -> tuple[int, int, int, int]:
+        x, y, width, height = current_widget_geometry(widget)
+        effective_width, effective_height = effective_window_size(widget, width, height)
+        return x, y, effective_width, effective_height
+
+    def _effective_widget_size(self, width: int, height: int) -> tuple[int, int]:
+        return effective_window_size(self, width, height)
+
+    def _non_overlapping_widget_position(
+        self,
+        key: str,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+    ) -> tuple[int, int]:
+        obstacles = self._visible_widget_rects(exclude_key=key)
+        if not obstacles:
+            return int(x), int(y)
+        effective_width, effective_height = self._effective_widget_size(int(width), int(height))
+        return find_non_overlapping_position(
+            int(x),
+            int(y),
+            effective_width,
+            effective_height,
+            obstacles,
+            gap=18,
+            margin=12,
+            screen_bounds=get_virtual_screen_bounds(self),
+        )
+
+    def place_widget_without_overlap(self, widget) -> None:
+        key = getattr(widget, "widget_key", "")
+        if not key:
+            return
+        try:
+            current_x, current_y, width, height = current_widget_geometry(widget)
+            x, y = self._non_overlapping_widget_position(key, current_x, current_y, width, height)
+            if x != current_x or y != current_y:
+                widget.geometry(f"{width}x{height}+{x}+{y}")
+                save_now = getattr(widget, "_save_geometry_now", None)
+                if callable(save_now):
+                    widget.after(0, save_now)
+        except Exception:
+            pass
 
     def save_widget_geometry(self, key: str, *, x: int, y: int, width: int, height: int) -> None:
         self.widget_state_service.set_widget_geometry(key, x=x, y=y, width=width, height=height)
@@ -315,6 +410,18 @@ class OptiPCApp(ctk.CTk):
             state = self.widget_state_service.get_widget_state(key)
             if state.get("visible", False):
                 self._create_or_show_widget(key, show_toast=False)
+        self.after(250, self._settle_visible_widgets)
+
+    def _settle_visible_widgets(self) -> None:
+        for key in self._widget_builders():
+            widget = self._get_widget_ref(key)
+            if widget is None:
+                continue
+            try:
+                if widget.winfo_exists() and widget.state() != "withdrawn":
+                    self.place_widget_without_overlap(widget)
+            except Exception:
+                continue
 
     def show_all_saved_widgets(self) -> None:
         for key in self._widget_builders():
@@ -325,6 +432,7 @@ class OptiPCApp(ctk.CTk):
                     self._create_or_show_widget(key, show_toast=False)
                 else:
                     widget.show_widget()
+        self.after(250, self._settle_visible_widgets)
         self.status_service.success("Saved widgets restored", toast=True)
 
     def hide_all_widgets(self) -> None:

@@ -20,6 +20,7 @@ from widgets.window_interactions import (
     clamp_widget_position,
     clamp_widget_size,
     configure_size_limits,
+    current_widget_geometry,
 )
 
 
@@ -374,6 +375,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self.deiconify()
         self.lift()
         self.attributes("-topmost", True)
+        self._settle_widget_position()
         if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
             self.master.on_widget_visibility_changed(self.widget_key, True)
         self._save_geometry_now()
@@ -405,11 +407,12 @@ class ModernMiniWidget(ctk.CTkToplevel):
         if not self.widget_key or not hasattr(self.master, "save_widget_geometry"):
             return
         try:
-            width, height = clamp_widget_size(self, self.winfo_width(), self.winfo_height())
+            x, y, current_width, current_height = current_widget_geometry(self)
+            width, height = clamp_widget_size(self, current_width, current_height)
             self.master.save_widget_geometry(
                 self.widget_key,
-                x=self.winfo_x(),
-                y=self.winfo_y(),
+                x=x,
+                y=y,
                 width=width,
                 height=height,
             )
@@ -417,9 +420,17 @@ class ModernMiniWidget(ctk.CTkToplevel):
             pass
 
     def _apply_constrained_geometry(self) -> None:
-        width, height = clamp_widget_size(self, self.winfo_width(), self.winfo_height())
-        if width != self.winfo_width() or height != self.winfo_height():
-            self.geometry(f"{width}x{height}+{self.winfo_x()}+{self.winfo_y()}")
+        x, y, current_width, current_height = current_widget_geometry(self)
+        width, height = clamp_widget_size(self, current_width, current_height)
+        if width != current_width or height != current_height:
+            self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def _settle_widget_position(self) -> None:
+        if hasattr(self.master, "place_widget_without_overlap"):
+            try:
+                self.master.place_widget_without_overlap(self)
+            except Exception:
+                pass
 
     def start_drag(self, event) -> None:
         if self._is_resizing:
@@ -574,10 +585,11 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self._resize_dir = direction
         self._resize_start_x = event.x_root
         self._resize_start_y = event.y_root
-        self._resize_start_w = self.winfo_width()
-        self._resize_start_h = self.winfo_height()
-        self._resize_start_win_x = self.winfo_x()
-        self._resize_start_win_y = self.winfo_y()
+        x, y, width, height = current_widget_geometry(self)
+        self._resize_start_w = width
+        self._resize_start_h = height
+        self._resize_start_win_x = x
+        self._resize_start_win_y = y
         
         # Stop event propagation to prevent conflicts
         return "break"
@@ -649,6 +661,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
     def on_mouse_up(self, event) -> None:
         self._is_resizing = False
         self._resize_dir = None
+        self._settle_widget_position()
         
         # Stop event propagation to prevent conflicts
         return "break"

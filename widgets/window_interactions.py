@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import re
 
 from config.constants import WIDGET_SIZE_LIMITS
 
@@ -15,6 +16,8 @@ CONTROL_CLASS_NAMES = {
     "CTkSwitch",
     "CTkTextbox",
 }
+
+GEOMETRY_PATTERN = re.compile(r"(\d+)x(\d+)([+-]\d+)([+-]\d+)")
 
 CURSOR_MAP = {
     None: "arrow",
@@ -119,6 +122,68 @@ def configure_size_limits(window, size_category: str, default_width: int, defaul
     window.MAX_HEIGHT = max(min_height, max_height)
 
 
+def current_widget_geometry(window) -> tuple[int, int, int, int]:
+    try:
+        match = GEOMETRY_PATTERN.match(str(window.geometry()))
+        if match:
+            return (
+                int(match.group(3)),
+                int(match.group(4)),
+                max(1, int(match.group(1))),
+                max(1, int(match.group(2))),
+            )
+    except Exception:
+        pass
+    return (
+        int(window.winfo_x()),
+        int(window.winfo_y()),
+        max(1, int(window.winfo_width())),
+        max(1, int(window.winfo_height())),
+    )
+
+
+def _window_scaling(window=None) -> float:
+    if window is None:
+        return 1.0
+    try:
+        scaling = float(window._get_window_scaling())
+        if scaling > 0:
+            return scaling
+    except Exception:
+        pass
+    return 1.0
+
+
+def effective_window_size(window, width: int | float, height: int | float) -> tuple[int, int]:
+    scale = _window_scaling(window)
+    return max(1, int(round(float(width) * scale))), max(1, int(round(float(height) * scale)))
+
+
+def get_virtual_screen_bounds(window=None) -> tuple[int, int, int, int] | None:
+    try:
+        user32 = ctypes.windll.user32
+        virtual_x = int(user32.GetSystemMetrics(76))
+        virtual_y = int(user32.GetSystemMetrics(77))
+        virtual_width = int(user32.GetSystemMetrics(78))
+        virtual_height = int(user32.GetSystemMetrics(79))
+        if virtual_width > 0 and virtual_height > 0:
+            scale = _window_scaling(window)
+            return (
+                int(round(virtual_x / scale)),
+                int(round(virtual_y / scale)),
+                int(round(virtual_width / scale)),
+                int(round(virtual_height / scale)),
+            )
+    except Exception:
+        pass
+    if window is not None:
+        try:
+            return 0, 0, int(window.winfo_screenwidth()), int(window.winfo_screenheight())
+        except Exception:
+            pass
+    return None
+
+
 def clamp_widget_size(window, width: int | float, height: int | float) -> tuple[int, int]:
     clamped_width = max(int(getattr(window, "MIN_WIDTH", 160)), min(int(width), int(getattr(window, "MAX_WIDTH", width))))
     clamped_height = max(int(getattr(window, "MIN_HEIGHT", 160)), min(int(height), int(getattr(window, "MAX_HEIGHT", height))))
@@ -128,19 +193,99 @@ def clamp_widget_size(window, width: int | float, height: int | float) -> tuple[
 def clamp_widget_position(window, x: int | float, y: int | float, width: int | float, height: int | float) -> tuple[int, int]:
     x = int(x)
     y = int(y)
-    try:
-        user32 = ctypes.windll.user32
-        virtual_x = int(user32.GetSystemMetrics(76))
-        virtual_y = int(user32.GetSystemMetrics(77))
-        virtual_width = int(user32.GetSystemMetrics(78))
-        virtual_height = int(user32.GetSystemMetrics(79))
-        if virtual_width > 0 and virtual_height > 0:
-            max_x = virtual_x + virtual_width - int(width)
-            max_y = virtual_y + virtual_height - int(height)
-            return max(virtual_x, min(x, max_x)), max(virtual_y, min(y, max_y))
-    except Exception:
-        pass
+    bounds = get_virtual_screen_bounds(window)
+    if bounds is not None:
+        virtual_x, virtual_y, virtual_width, virtual_height = bounds
+        effective_width, effective_height = effective_window_size(window, width, height)
+        max_x = virtual_x + virtual_width - effective_width
+        max_y = virtual_y + virtual_height - effective_height
+        return max(virtual_x, min(x, max_x)), max(virtual_y, min(y, max_y))
     return x, y
+
+
+def rectangles_overlap(
+    first: tuple[int, int, int, int],
+    second: tuple[int, int, int, int],
+    *,
+    gap: int = 0,
+) -> bool:
+    first_x, first_y, first_w, first_h = first
+    second_x, second_y, second_w, second_h = second
+    return not (
+        first_x + first_w + gap <= second_x
+        or second_x + second_w + gap <= first_x
+        or first_y + first_h + gap <= second_y
+        or second_y + second_h + gap <= first_y
+    )
+
+
+def find_non_overlapping_position(
+    x: int | float,
+    y: int | float,
+    width: int | float,
+    height: int | float,
+    obstacles: list[tuple[int, int, int, int]],
+    *,
+    gap: int = 16,
+    margin: int = 12,
+    screen_bounds: tuple[int, int, int, int] | None = None,
+) -> tuple[int, int]:
+    width = int(width)
+    height = int(height)
+    x = int(x)
+    y = int(y)
+
+    bounds = screen_bounds if screen_bounds is not None else get_virtual_screen_bounds()
+    if bounds is None:
+        return x, y
+    screen_x, screen_y, screen_w, screen_h = bounds
+    min_x = screen_x + margin
+    min_y = screen_y + margin
+    max_x = max(min_x, screen_x + screen_w - width - margin)
+    max_y = max(min_y, screen_y + screen_h - height - margin)
+
+    def clamp_position(candidate_x: int, candidate_y: int) -> tuple[int, int]:
+        return max(min_x, min(candidate_x, max_x)), max(min_y, min(candidate_y, max_y))
+
+    def clear(candidate_x: int, candidate_y: int) -> bool:
+        candidate = (candidate_x, candidate_y, width, height)
+        return all(not rectangles_overlap(candidate, obstacle, gap=gap) for obstacle in obstacles)
+
+    proposed_x, proposed_y = clamp_position(x, y)
+    if clear(proposed_x, proposed_y):
+        return proposed_x, proposed_y
+
+    candidates: set[tuple[int, int]] = {(proposed_x, proposed_y)}
+    for obs_x, obs_y, obs_w, obs_h in obstacles:
+        candidates.update(
+            {
+                clamp_position(obs_x + obs_w + gap, obs_y),
+                clamp_position(obs_x - width - gap, obs_y),
+                clamp_position(obs_x, obs_y + obs_h + gap),
+                clamp_position(obs_x, obs_y - height - gap),
+                clamp_position(obs_x + obs_w + gap, obs_y + obs_h + gap),
+                clamp_position(obs_x - width - gap, obs_y + obs_h + gap),
+            }
+        )
+
+    step_x = max(32, min(width + gap, 360))
+    step_y = max(32, min(height + gap, 300))
+    current_y = min_y
+    while current_y <= max_y:
+        current_x = min_x
+        while current_x <= max_x:
+            candidates.add((current_x, current_y))
+            current_x += step_x
+        current_y += step_y
+
+    ordered_candidates = sorted(
+        candidates,
+        key=lambda point: (abs(point[0] - proposed_x) + abs(point[1] - proposed_y), point[1], point[0]),
+    )
+    for candidate_x, candidate_y in ordered_candidates:
+        if clear(candidate_x, candidate_y):
+            return candidate_x, candidate_y
+    return proposed_x, proposed_y
 
 
 def clamp_resize_geometry(window, direction: str, x: int | float, y: int | float, width: int | float, height: int | float) -> tuple[int, int, int, int]:
@@ -193,6 +338,10 @@ def bind_drag_target(window, target) -> None:
     def on_release(event):
         if getattr(window, "_is_resizing", False):
             return window.on_mouse_up(event)
+        try:
+            window._settle_widget_position()
+        except Exception:
+            pass
         return None
 
     try:

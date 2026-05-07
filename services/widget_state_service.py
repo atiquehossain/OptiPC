@@ -71,6 +71,12 @@ class WidgetStateService:
     def get_widget_state(self, key: str) -> dict[str, Any]:
         return dict(self._state.get("widgets", {}).get(key, {}))
 
+    def get_all_widget_states(self) -> dict[str, dict[str, Any]]:
+        widgets = self._state.get("widgets", {})
+        if not isinstance(widgets, dict):
+            return {}
+        return {str(key): dict(value) for key, value in widgets.items() if isinstance(value, dict)}
+
     def set_widget_visible(self, key: str, visible: bool) -> None:
         widgets = self._state.setdefault("widgets", {})
         widget = widgets.setdefault(key, {})

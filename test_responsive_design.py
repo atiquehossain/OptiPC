@@ -145,8 +145,8 @@ def test_live_responsive_helper():
 
         class FakeWindow:
             size_category = "small"
-            _default_width = 320
-            _default_height = 240
+            _default_width = 280
+            _default_height = 210
             PADDING_HORIZONTAL = 20
 
             def __init__(self, width, height):
@@ -160,7 +160,7 @@ def test_live_responsive_helper():
                 return self.height
 
         compact = FakeWindow(190, 190)
-        roomy = FakeWindow(320, 240)
+        roomy = FakeWindow(280, 210)
 
         if responsive_font_size(compact, "body") > responsive_font_size(roomy, "body"):
             print("FAIL: Compact font is larger than roomy font")
@@ -176,6 +176,37 @@ def test_live_responsive_helper():
         return False
 
 
+def test_widget_overlap_placement():
+    """Test widget placement keeps a readable gap from existing widgets."""
+    try:
+        from widgets import window_interactions
+
+        original_bounds = window_interactions.get_virtual_screen_bounds
+        window_interactions.get_virtual_screen_bounds = lambda: (0, 0, 1200, 800)
+        try:
+            x, y = window_interactions.find_non_overlapping_position(
+                100,
+                100,
+                280,
+                210,
+                [(100, 100, 280, 210)],
+                gap=18,
+                margin=12,
+            )
+        finally:
+            window_interactions.get_virtual_screen_bounds = original_bounds
+
+        if window_interactions.rectangles_overlap((x, y, 280, 210), (100, 100, 280, 210), gap=18):
+            print("FAIL: Placement still overlaps an existing widget")
+            return False
+
+        print("OK: Widget placement avoids overlap with a gap")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Widget overlap placement test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -187,6 +218,7 @@ def main():
         ("Widget Size Limit Tests", test_widget_size_limits),
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),
         ("Live Responsive Helper Tests", test_live_responsive_helper),
+        ("Widget Overlap Placement Tests", test_widget_overlap_placement),
     ]
 
     passed = 0

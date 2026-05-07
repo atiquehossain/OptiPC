@@ -21,17 +21,17 @@ def _frame_size(widget, frame) -> tuple[int, int]:
     except Exception:
         width = height = 0
     if width <= 20:
-        width = max(120, int(widget.winfo_width()) - 48)
+        width = max(104, int(widget.winfo_width()) - 48)
     if height <= 20:
-        height = max(90, int(widget.winfo_height()) - 126)
+        height = max(68, int(widget.winfo_height()) - 126)
     return width, height
 
 
 def calendar_cell_metrics(widget, frame) -> tuple[int, int, int]:
     width, height = _frame_size(widget, frame)
-    cell_width = max(22, min(44, int((width - 12) / 7)))
-    cell_height = max(14, min(28, int((height - 10) / 7)))
-    font_size = 9 if cell_height <= 16 else 10 if cell_height <= 20 else 11
+    cell_width = max(16, min(44, int((width - 4) / 7)))
+    cell_height = max(10, min(28, int((height - 4) / 7)))
+    font_size = 8 if cell_height <= 13 else 9 if cell_height <= 16 else 10 if cell_height <= 20 else 11
     return cell_width, cell_height, font_size
 
 
@@ -42,7 +42,7 @@ def apply_calendar_grid_layout(widget, frame, day_labels, day_buttons) -> None:
     cell_width, cell_height, font_size = calendar_cell_metrics(widget, frame)
     header_font = ctk.CTkFont(size=max(9, font_size), weight="bold")
     day_font = ctk.CTkFont(size=font_size, weight="bold")
-    radius = max(6, min(14, cell_height // 2))
+    radius = max(4, min(14, cell_height // 2))
 
     for column, label in enumerate(day_labels):
         try:

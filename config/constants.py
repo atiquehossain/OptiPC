@@ -323,8 +323,8 @@ WIDGET_THEMES = {
 }
 
 # Standard Widget Dimensions
-DEFAULT_WIDGET_WIDTH = 320
-DEFAULT_WIDGET_HEIGHT = 240
+DEFAULT_WIDGET_WIDTH = 280
+DEFAULT_WIDGET_HEIGHT = 210
 UNIFORM_WIDGET_SIZE = {"width": DEFAULT_WIDGET_WIDTH, "height": DEFAULT_WIDGET_HEIGHT}
 
 WIDGET_SIZES = {
@@ -335,10 +335,12 @@ WIDGET_SIZES = {
     "default": dict(UNIFORM_WIDGET_SIZE),
 }
 
-WIDGET_DEFAULT_SIZE_VERSION = 2
+WIDGET_DEFAULT_SIZE_VERSION = 3
 LEGACY_WIDGET_DEFAULT_SIZES = {
     (200, 200),
+    (280, 210),
     (320, 220),
+    (320, 240),
     (400, 220),
     (400, 420),
     (330, 250),
@@ -358,8 +360,8 @@ LEGACY_WIDGET_DEFAULT_SIZES = {
 WIDGET_SIZE_LIMITS = {
     "small": {"min_width": 190, "min_height": 190, "max_width": 420, "max_height": 360},
     "medium": {"min_width": 220, "min_height": 190, "max_width": 560, "max_height": 380},
-    "large": {"min_width": 280, "min_height": 220, "max_width": 720, "max_height": 420},
-    "extra_large": {"min_width": 320, "min_height": 240, "max_width": 720, "max_height": 680},
+    "large": {"min_width": 260, "min_height": 200, "max_width": 720, "max_height": 420},
+    "extra_large": {"min_width": 280, "min_height": 210, "max_width": 720, "max_height": 680},
     "default": {"min_width": 190, "min_height": 190, "max_width": 560, "max_height": 380},
 }
 
