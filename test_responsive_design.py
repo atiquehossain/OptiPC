@@ -172,6 +172,52 @@ def test_cpu_usage_helpers():
         return False
 
 
+def test_bluetooth_widget_connection_summary():
+    """Test Bluetooth widget does not mark paired-only devices as connected."""
+    try:
+        from widgets.smart_widgets import BluetoothWidget
+
+        widget = BluetoothWidget.__new__(BluetoothWidget)
+        paired_entries = [
+            {
+                "FriendlyName": "Md's JBL Go 4",
+                "Status": "OK",
+                "InstanceId": r"BTHENUM\DEV_20185BF24911\7&TEST&0&BLUETOOTHDEVICE_20185BF24911",
+            },
+            {
+                "FriendlyName": "Md's JBL Go 4 Avrcp Transport",
+                "Status": "OK",
+                "InstanceId": r"BTHENUM\{0000110C-0000-1000-8000-00805F9B34FB}\7&TEST",
+            },
+        ]
+        radio_entries = [{"FriendlyName": "Bluetooth", "Status": "OK", "InstanceId": r"SWD\RADIO\BLUETOOTH_TEST"}]
+        disconnected_endpoints = [{"Name": "Headphones (Md's JBL Go 4)", "Status": "Unknown"}]
+
+        paired_only = widget._summarize_bluetooth_entries(paired_entries, "running", radio_entries, disconnected_endpoints)
+        if paired_only["connected_count"] != 0 or paired_only["audio_active"]:
+            print("FAIL: Paired Bluetooth devices were counted as connected")
+            return False
+        if paired_only["summary"] != "Bluetooth on | no devices connected":
+            print(f"FAIL: Paired-only summary was wrong: {paired_only['summary']}")
+            return False
+
+        connected = widget._summarize_bluetooth_entries(
+            paired_entries,
+            "running",
+            radio_entries,
+            [{"Name": "Headphones (Md's JBL Go 4)", "Status": "OK"}],
+        )
+        if connected["connected_count"] != 1 or not connected["audio_active"]:
+            print("FAIL: Active Bluetooth audio endpoint was not counted")
+            return False
+
+        print("OK: Bluetooth widget distinguishes paired devices from live connections")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Bluetooth widget connection test error: {exc}")
+        return False
+
+
 def test_responsive_fonts():
     """Test responsive font scaling."""
     try:
@@ -654,6 +700,7 @@ def main():
         ("Widget Spec Tests", test_widget_specs),
         ("Widget Text Role Tests", test_widget_text_roles),
         ("CPU Usage Helper Tests", test_cpu_usage_helpers),
+        ("Bluetooth Connection Tests", test_bluetooth_widget_connection_summary),
         ("Responsive Font Tests", test_responsive_fonts),
         ("Widget Size Limit Tests", test_widget_size_limits),
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),

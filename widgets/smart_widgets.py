@@ -992,9 +992,17 @@ class BluetoothWidget(SmartWidgetBase):
 $items = @(Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
     Where-Object { $_.FriendlyName } |
     Select-Object FriendlyName, Status, Class, InstanceId)
+$radio = @(Get-PnpDevice -Class SoftwareDevice -ErrorAction SilentlyContinue |
+    Where-Object { $_.FriendlyName -eq 'Bluetooth' -or $_.InstanceId -like 'SWD\RADIO\BLUETOOTH*' } |
+    Select-Object FriendlyName, Status, Class, InstanceId)
+$audioEndpoints = @(Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
+    Where-Object { $_.PNPClass -eq 'AudioEndpoint' } |
+    Select-Object Name, Status, PNPDeviceID)
 $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -First 1 Status
 [pscustomobject]@{
     Items = $items
+    Radio = $radio
+    AudioEndpoints = $audioEndpoints
     ServiceStatus = if ($service) { [string]$service.Status } else { $null }
 } | ConvertTo-Json -Compress -Depth 4
 """
@@ -1010,11 +1018,19 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
             raw = result.stdout.strip()
             data = json.loads(raw) if raw else {}
             items = data.get("Items", []) if isinstance(data, dict) else []
+            radio = data.get("Radio", []) if isinstance(data, dict) else []
+            audio_endpoints = data.get("AudioEndpoints", []) if isinstance(data, dict) else []
             if isinstance(items, dict):
                 items = [items]
+            if isinstance(radio, dict):
+                radio = [radio]
+            if isinstance(audio_endpoints, dict):
+                audio_endpoints = [audio_endpoints]
             entries = [item for item in items if isinstance(item, dict)]
+            radio_entries = [item for item in radio if isinstance(item, dict)]
+            endpoint_entries = [item for item in audio_endpoints if isinstance(item, dict)]
             service_status = str(data.get("ServiceStatus") or "").lower() if isinstance(data, dict) else ""
-            return self._summarize_bluetooth_entries(entries, service_status)
+            return self._summarize_bluetooth_entries(entries, service_status, radio_entries, endpoint_entries)
         except Exception:
             return {
                 "available": False,
@@ -1025,24 +1041,28 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
                 "summary": "Bluetooth unavailable",
             }
 
-    def _summarize_bluetooth_entries(self, entries: list[dict], service_status: str) -> dict[str, object]:
-        ok_entries = [entry for entry in entries if str(entry.get("Status") or "").strip().lower() == "ok"]
+    def _summarize_bluetooth_entries(
+        self,
+        entries: list[dict],
+        service_status: str,
+        radio_entries: list[dict] | None = None,
+        audio_endpoints: list[dict] | None = None,
+    ) -> dict[str, object]:
+        radio_entries = radio_entries or []
+        audio_endpoints = audio_endpoints or []
+        radio_ok = any(str(entry.get("Status") or "").strip().lower() == "ok" for entry in radio_entries)
         device_entries = [entry for entry in entries if self._is_device_candidate(str(entry.get("FriendlyName") or ""))]
-        connected_entries = [
-            entry for entry in device_entries if str(entry.get("Status") or "").strip().lower() == "ok"
-        ]
-        audio_active = any(
-            any(token in str(entry.get("FriendlyName") or "").lower() for token in self._AUDIO_TOKENS)
-            for entry in ok_entries
-        )
-        available = bool(entries) or service_status == "running"
-        radio_active = bool(ok_entries) or service_status == "running"
-        connected_count = len(connected_entries)
+        paired_names = self._paired_device_names(device_entries)
+        connected_names = self._connected_audio_names(paired_names, audio_endpoints)
+        audio_active = bool(connected_names)
+        available = bool(entries) or bool(radio_entries) or service_status == "running"
+        radio_active = radio_ok or service_status == "running"
+        connected_count = len(connected_names)
         device_count = len(device_entries)
         if radio_active and connected_count:
             summary = f"Bluetooth on | {connected_count} connected"
         elif radio_active:
-            summary = "Bluetooth on | no devices"
+            summary = "Bluetooth on | no devices connected"
         elif available:
             summary = "Bluetooth idle"
         else:
@@ -1060,6 +1080,39 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
         lower = name.lower().strip()
         return bool(lower) and not any(token in lower for token in self._DEVICE_EXCLUDE_TOKENS)
 
+    @staticmethod
+    def _normalize_device_name(name: str) -> str:
+        return "".join(char.lower() for char in str(name or "") if char.isalnum())
+
+    def _paired_device_names(self, entries: list[dict]) -> list[str]:
+        names: list[str] = []
+        seen: set[str] = set()
+        for entry in entries:
+            instance_id = str(entry.get("InstanceId") or "").upper()
+            if not instance_id.startswith("BTHENUM\\DEV_"):
+                continue
+            name = str(entry.get("FriendlyName") or "").strip()
+            normalized = self._normalize_device_name(name)
+            if name and normalized and normalized not in seen:
+                names.append(name)
+                seen.add(normalized)
+        return names
+
+    def _connected_audio_names(self, paired_names: list[str], audio_endpoints: list[dict]) -> list[str]:
+        connected: list[str] = []
+        seen: set[str] = set()
+        normalized_pairs = [(name, self._normalize_device_name(name)) for name in paired_names]
+        for endpoint in audio_endpoints:
+            if str(endpoint.get("Status") or "").strip().lower() != "ok":
+                continue
+            endpoint_name = str(endpoint.get("Name") or "")
+            normalized_endpoint = self._normalize_device_name(endpoint_name)
+            for name, normalized_name in normalized_pairs:
+                if normalized_name and normalized_name in normalized_endpoint and normalized_name not in seen:
+                    connected.append(name)
+                    seen.add(normalized_name)
+        return connected
+
     def _ring_model(self) -> list[dict[str, object]]:
         snapshot = self._bluetooth_snapshot
         radio_active = bool(snapshot.get("radio_active"))
@@ -1067,7 +1120,7 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
         connected_count = int(snapshot.get("connected_count") or 0)
         device_count = int(snapshot.get("device_count") or 0)
         audio_active = bool(snapshot.get("audio_active"))
-        devices_progress = min(1.0, 0.25 + (connected_count * 0.25)) if connected_count else (0.16 if device_count else 0.0)
+        devices_progress = min(1.0, 0.25 + (connected_count * 0.25)) if connected_count else 0.0
         return [
             {"icon": "phone", "active": radio_active, "progress": 0.68 if radio_active else (0.18 if available else 0.0)},
             {"icon": "watch", "active": radio_active and connected_count > 0, "progress": devices_progress},
