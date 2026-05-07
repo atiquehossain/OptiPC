@@ -16,9 +16,13 @@ except Exception:
 from widgets.calendar_responsive import (
     apply_calendar_footer_visibility,
     apply_calendar_grid_layout,
+    CALENDAR_TODAY_COLOR,
+    CALENDAR_TODAY_HOVER,
+    CALENDAR_WEEKDAY_LABELS,
     calendar_size_class,
     calendar_uses_month_grid,
     calendar_day_font,
+    calendar_month_dates,
     install_calendar_grid,
     widget_content_margin,
 )
@@ -364,8 +368,7 @@ class CalendarWidget(BaseMiniWidget):
         
         # Day headers
         self.day_labels = []
-        days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        for i, day in enumerate(days):
+        for i, day in enumerate(CALENDAR_WEEKDAY_LABELS):
             label = self.create_responsive_label(
                 self.calendar_frame,
                 day,
@@ -411,58 +414,19 @@ class CalendarWidget(BaseMiniWidget):
     def _layout_calendar(self) -> None:
         if not hasattr(self, "calendar_frame"):
             return
-        size_class = calendar_size_class(self)
-        margin = widget_content_margin(self)
-        uses_grid = calendar_uses_month_grid(self)
         try:
-            if uses_grid:
-                if self.summary_panel.winfo_manager():
-                    self.summary_panel.pack_forget()
-                if not self.nav_frame.winfo_manager():
-                    self.nav_frame.pack(fill="x", pady=(8, 4))
-                if not self.calendar_frame.winfo_manager():
-                    self.calendar_frame.pack(fill="both", expand=True, padx=4, pady=(8, 12))
-                compact = size_class == "large"
-                self.nav_frame.pack_configure(pady=(4, 3) if compact else (8, 4))
-                self.calendar_frame.pack_configure(padx=4, pady=(4, 8) if compact else (8, 12))
-            else:
-                if self.nav_frame.winfo_manager():
-                    self.nav_frame.pack_forget()
-                if self.calendar_frame.winfo_manager():
-                    self.calendar_frame.pack_forget()
-                if getattr(self, "datetime_label", None) is not None and self.datetime_label.winfo_manager():
-                    self.datetime_label.pack_forget()
-                if not self.summary_panel.winfo_manager():
-                    self.summary_panel.pack(fill="both", expand=True)
-                self._layout_summary_panel(size_class, margin)
-                return
-
-            button_size = 24 if size_class == "large" else 30
-            self.prev_btn.configure(width=button_size, height=button_size)
-            self.next_btn.configure(width=button_size, height=button_size)
-            side_pad = 4 if size_class == "large" else 8
-            self.prev_btn.pack_configure(padx=(0, side_pad))
-            self.next_btn.pack_configure(padx=(side_pad, 0))
-            self.today_btn.pack_configure(padx=(side_pad, 0))
-            self.today_btn.configure(
-                text="Tdy" if size_class == "large" else "Today",
-                width=44 if size_class == "large" else 60,
-                height=button_size,
-                font=ctk.CTkFont(
-                    size=self.get_responsive_font_size("tiny" if size_class == "large" else "body"),
-                    weight="bold",
-                ),
-            )
-            self.month_label.configure(wraplength=max(140, self.winfo_width() - 172))
+            if self.nav_frame.winfo_manager():
+                self.nav_frame.pack_forget()
+            if self.summary_panel.winfo_manager():
+                self.summary_panel.pack_forget()
+            if getattr(self, "datetime_label", None) is not None and self.datetime_label.winfo_manager():
+                self.datetime_label.pack_forget()
+            if not self.calendar_frame.winfo_manager():
+                self.calendar_frame.pack(fill="both", expand=True, padx=0, pady=0)
+            self.calendar_frame.pack_configure(padx=0, pady=0)
+            self.calendar_frame.configure(fg_color="transparent")
         except Exception:
             pass
-        if size_class == "extra_large":
-            apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(4, 8))
-        elif getattr(self, "datetime_label", None) is not None:
-            try:
-                self.datetime_label.pack_forget()
-            except Exception:
-                pass
         apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
 
     def _layout_summary_panel(self, size_class: str, margin: int) -> None:
@@ -547,68 +511,51 @@ class CalendarWidget(BaseMiniWidget):
         self.update_calendar()
 
     def update_calendar(self):
-        # Update month/year label
         month_name = calendar.month_name[self.display_month]
-        size_class = calendar_size_class(self)
-        month_text = f"{month_name[:3]} {self.display_year}" if size_class == "large" else f"{month_name} {self.display_year}"
-        self.month_label.configure(text=month_text)
+        self.month_label.configure(text=f"{month_name} {self.display_year}")
         self._update_summary_labels()
         self._layout_calendar()
-        if not calendar_uses_month_grid(self):
-            self.update_time()
-            return
-         
-        # Get calendar data
-        cal = calendar.monthcalendar(self.display_year, self.display_month)
+        weeks = calendar_month_dates(self.display_year, self.display_month)
+        today = self.current_date.date()
         
-        # Clear and update day buttons
         for week in range(6):
             for day in range(7):
                 btn = self.day_buttons[week][day]
-                
-                if week < len(cal) and day < len(cal[week]) and cal[week][day] != 0:
-                    day_num = cal[week][day]
-                    btn.configure(text=str(day_num))
-                    
-                    # Check if this is today
-                    is_today = (self.display_year == self.current_date.year and 
-                               self.display_month == self.current_date.month and 
-                               day_num == self.current_date.day)
-                    
-                    # Check if this is weekend
-                    is_weekend = day == 0 or day == 6
-                    
-                    # Apply styling based on conditions
-                    if is_today:
-                        btn.configure(
-                            fg_color=self.widget_accent_color(),
-                            hover_color=self.theme.get("button_hover", "#343638"),
-                            text_color=self.widget_on_accent_color(),
-                            font=calendar_day_font(self, self.calendar_frame, bold=True)
-                        )
-                    elif is_weekend:
-                        btn.configure(
-                            fg_color=self.theme.get("panel", "#212121"),
-                            hover_color=self.theme.get("button_hover", "#343638"),
-                            text_color=self.widget_accent_color(),
-                            font=calendar_day_font(self, self.calendar_frame, bold=False)
-                        )
-                    else:
-                        btn.configure(
-                            fg_color=self.theme.get("panel", "#212121"),
-                            hover_color=self.theme.get("button_hover", "#343638"),
-                            text_color=self.theme.get("text", "#ffffff"),
-                            font=calendar_day_font(self, self.calendar_frame, bold=False)
-                        )
+                day_date = weeks[week][day]
+                is_today = day_date == today
+                is_current_month = day_date.month == self.display_month
+                is_weekend = day_date.weekday() >= 5
+                btn._optipc_calendar_date = day_date
+
+                if is_today:
+                    fg_color = CALENDAR_TODAY_COLOR
+                    hover_color = CALENDAR_TODAY_HOVER
+                    text_color = "#111111"
+                    bold = True
+                elif not is_current_month:
+                    fg_color = "transparent"
+                    hover_color = self.theme.get("button_hover", "#343638")
+                    text_color = self.theme.get("progress_track", self.theme.get("muted", "#666666"))
+                    bold = True
+                elif is_weekend:
+                    fg_color = "transparent"
+                    hover_color = self.theme.get("button_hover", "#343638")
+                    text_color = self.theme.get("muted", "#8a8a8a")
+                    bold = True
                 else:
-                    btn.configure(
-                        text="",
-                        fg_color=self.theme.get("window_bg", "#141922"),
-                        hover_color=self.theme.get("window_bg", "#141922"),
-                        text_color=self.theme.get("text", "#ffffff")
-                    )
-        
-        # Update current time display
+                    fg_color = "transparent"
+                    hover_color = self.theme.get("button_hover", "#343638")
+                    text_color = self.theme.get("text", "#ffffff")
+                    bold = True
+
+                btn.configure(
+                    text=str(day_date.day),
+                    fg_color=fg_color,
+                    hover_color=hover_color,
+                    text_color=text_color,
+                    font=calendar_day_font(self, self.calendar_frame, bold=bold),
+                )
+
         self.update_time()
 
     def update_time(self):
@@ -655,8 +602,12 @@ class CalendarWidget(BaseMiniWidget):
         day_text = btn.cget("text")
         
         if day_text:  # Only process if it's a valid day
-            day_num = int(day_text)
-            clicked_date = datetime(self.display_year, self.display_month, day_num)
+            saved_date = getattr(btn, "_optipc_calendar_date", None)
+            clicked_date = (
+                datetime(saved_date.year, saved_date.month, saved_date.day)
+                if saved_date is not None
+                else datetime(self.display_year, self.display_month, int(day_text))
+            )
             
             # You could add functionality here, like:
             # - Adding events to a calendar

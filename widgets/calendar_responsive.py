@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import calendar
+from datetime import date, timedelta
+
 import customtkinter as ctk
 
 from config.constants import WIDGET_CONTENT_MARGIN
 from widgets.window_interactions import current_widget_geometry
+
+CALENDAR_WEEKDAY_LABELS = ("M", "T", "W", "T", "F", "S", "S")
+CALENDAR_TODAY_COLOR = "#ff453a"
+CALENDAR_TODAY_HOVER = "#ff6961"
 
 
 def widget_logical_size(widget) -> tuple[int, int]:
@@ -34,7 +41,7 @@ def calendar_size_class(widget) -> str:
 
 
 def calendar_uses_month_grid(widget) -> bool:
-    return calendar_size_class(widget) in {"large", "extra_large"}
+    return True
 
 
 def widget_content_margin(widget) -> int:
@@ -65,21 +72,21 @@ def _frame_size(widget, frame) -> tuple[int, int]:
     except Exception:
         width = height = 0
     if width <= 20:
-        width = max(104, widget_width - 48)
+        width = max(112, widget_width - 30)
     elif width > widget_width * 1.25:
-        width = max(104, widget_width - 48)
+        width = max(112, widget_width - 30)
     if height <= 20:
-        height = max(68, widget_height - 126)
+        height = max(112, widget_height - 30)
     elif height > widget_height * 1.25:
-        height = max(68, widget_height - 126)
+        height = max(112, widget_height - 30)
     return width, height
 
 
 def calendar_cell_metrics(widget, frame) -> tuple[int, int, int]:
     width, height = _frame_size(widget, frame)
-    cell_width = max(16, min(44, int((width - 4) / 7)))
-    cell_height = max(10, min(28, int((height - 4) / 7)))
-    font_size = 8 if cell_height <= 13 else 9 if cell_height <= 16 else 10 if cell_height <= 20 else 11
+    cell_width = max(14, min(48, int((width - 4) / 7)))
+    cell_height = max(14, min(32, int((height - 4) / 7)))
+    font_size = 8 if cell_height <= 15 else 9 if cell_height <= 18 else 10 if cell_height <= 22 else 12
     return cell_width, cell_height, font_size
 
 
@@ -90,7 +97,7 @@ def apply_calendar_grid_layout(widget, frame, day_labels, day_buttons) -> None:
     cell_width, cell_height, font_size = calendar_cell_metrics(widget, frame)
     header_font = ctk.CTkFont(size=max(9, font_size), weight="bold")
     day_font = ctk.CTkFont(size=font_size, weight="bold")
-    radius = max(4, min(14, cell_height // 2))
+    radius = max(6, min(20, min(cell_width, cell_height) // 2))
 
     for column, label in enumerate(day_labels):
         try:
@@ -125,3 +132,11 @@ def calendar_day_font(widget, frame, *, bold: bool = True) -> ctk.CTkFont:
     if not bold and cell_height <= 16:
         font_size = max(8, font_size - 1)
     return ctk.CTkFont(size=font_size, weight="bold" if bold else "normal")
+
+
+def calendar_month_dates(year: int, month: int) -> list[list[date]]:
+    weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(year, month)
+    while len(weeks) < 6:
+        start = weeks[-1][-1] + timedelta(days=1)
+        weeks.append([start + timedelta(days=offset) for offset in range(7)])
+    return weeks[:6]

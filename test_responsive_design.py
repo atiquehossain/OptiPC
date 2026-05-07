@@ -382,7 +382,13 @@ def test_app_overlap_placement_keeps_right_column():
 def test_calendar_size_classes():
     """Test calendar content modes follow Mac-style widget size classes."""
     try:
-        from widgets.calendar_responsive import calendar_size_class, calendar_uses_month_grid, widget_content_margin
+        from widgets.calendar_responsive import (
+            CALENDAR_WEEKDAY_LABELS,
+            calendar_month_dates,
+            calendar_size_class,
+            calendar_uses_month_grid,
+            widget_content_margin,
+        )
 
         class FakeCalendar:
             def __init__(self, width, height):
@@ -399,8 +405,8 @@ def test_calendar_size_classes():
                 return self.height
 
         cases = [
-            (170, 170, "small", False, 10),
-            (364, 170, "medium", False, 12),
+            (170, 170, "small", True, 10),
+            (364, 170, "medium", True, 12),
             (364, 376, "large", True, 16),
             (745, 376, "extra_large", True, 16),
         ]
@@ -415,6 +421,18 @@ def test_calendar_size_classes():
             if widget_content_margin(widget) != expected_margin:
                 print(f"FAIL: Calendar {width}x{height} margin mismatch")
                 return False
+
+        if CALENDAR_WEEKDAY_LABELS != ("M", "T", "W", "T", "F", "S", "S"):
+            print("FAIL: Calendar weekdays are not Monday-first")
+            return False
+        may_2026 = calendar_month_dates(2026, 5)
+        first_row = [day.day for day in may_2026[0]]
+        if first_row != [27, 28, 29, 30, 1, 2, 3]:
+            print(f"FAIL: Calendar leading dates mismatch: {first_row}")
+            return False
+        if len(may_2026) != 6 or any(len(week) != 7 for week in may_2026):
+            print("FAIL: Calendar does not return a fixed 6x7 grid")
+            return False
 
         print("OK: Calendar size classes switch content modes correctly")
         return True

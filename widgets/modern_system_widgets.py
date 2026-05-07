@@ -7,7 +7,11 @@ import customtkinter as ctk
 from widgets.calendar_responsive import (
     apply_calendar_footer_visibility,
     apply_calendar_grid_layout,
+    CALENDAR_TODAY_COLOR,
+    CALENDAR_TODAY_HOVER,
+    CALENDAR_WEEKDAY_LABELS,
     calendar_day_font,
+    calendar_month_dates,
     install_calendar_grid,
 )
 from widgets.modern_widget_base import ModernMiniWidget
@@ -580,8 +584,7 @@ class ModernCalendarWidget(ModernMiniWidget):
         
         # Day headers
         self.day_labels = []
-        days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        for i, day in enumerate(days):
+        for i, day in enumerate(CALENDAR_WEEKDAY_LABELS):
             label = self.create_apple_label(
                 self.calendar_frame,
                 day,
@@ -626,32 +629,16 @@ class ModernCalendarWidget(ModernMiniWidget):
         if not hasattr(self, "calendar_frame"):
             return
         try:
-            compact = self.winfo_height() < 300
-            very_compact = compact and (self.winfo_height() < 240 or self.winfo_width() < 300)
-            nav_pad_y = (2, 2) if very_compact else (4, 3) if compact else (self.SPACING_NORMAL, self.SPACING_TIGHT)
-            grid_pad_y = (2, 4) if very_compact else (3, 6) if compact else (self.SPACING_TIGHT, self.SPACING_NORMAL)
-            self.nav_frame.pack_configure(pady=nav_pad_y)
-            self.calendar_frame.pack_configure(pady=grid_pad_y)
-            button_size = 22 if very_compact else 24 if compact else 32
-            self.prev_btn.configure(width=button_size, height=button_size)
-            self.next_btn.configure(width=button_size, height=button_size)
-            side_pad = 2 if very_compact else 4 if compact else self.SPACING_NORMAL
-            self.prev_btn.pack_configure(padx=(0, side_pad))
-            self.next_btn.pack_configure(padx=(side_pad, 0))
-            self.today_btn.pack_configure(padx=(side_pad, 0))
-            self.today_btn.configure(
-                text="T" if very_compact else "Tdy" if compact else "Today",
-                width=32 if very_compact else 44 if compact else 70,
-                height=button_size,
-                font=ctk.CTkFont(
-                    size=self.get_responsive_font_size("tiny" if compact else "body"),
-                    weight="bold",
-                ),
-            )
-            self.month_label.configure(wraplength=max(70, self.winfo_width() - (126 if very_compact else 168)))
+            if self.nav_frame.winfo_manager():
+                self.nav_frame.pack_forget()
+            if getattr(self, "datetime_label", None) is not None and self.datetime_label.winfo_manager():
+                self.datetime_label.pack_forget()
+            if not self.calendar_frame.winfo_manager():
+                self.calendar_frame.pack(fill="both", expand=True, pady=0)
+            self.calendar_frame.pack_configure(pady=0)
+            self.calendar_frame.configure(fg_color="transparent", border_width=0)
         except Exception:
             pass
-        apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(self.SPACING_TIGHT, 0))
         apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
 
     def refresh_theme(self) -> None:
@@ -686,8 +673,9 @@ class ModernCalendarWidget(ModernMiniWidget):
         # Update calendar frame
         if hasattr(self, 'calendar_frame'):
             self.calendar_frame.configure(
-                fg_color=self.theme["panel"],
-                border_color=self.theme.get("border", "transparent")
+                fg_color="transparent",
+                border_width=0,
+                border_color=self.theme.get("border", self.theme.get("progress_track", "#3a3a3a"))
             )
         
         # Update day buttons with current theme
@@ -697,62 +685,50 @@ class ModernCalendarWidget(ModernMiniWidget):
         import calendar
         from datetime import datetime
         
-        # Update month/year label
         month_name = calendar.month_name[self.display_month]
         self.month_label.configure(text=f"{month_name} {self.display_year}")
         self._layout_calendar()
-        
-        # Get calendar data
-        cal = calendar.monthcalendar(self.display_year, self.display_month)
-        
-        # Clear and update day buttons
+        weeks = calendar_month_dates(self.display_year, self.display_month)
+        today = self.current_date.date()
+
         for week in range(6):
             for day in range(7):
                 btn = self.day_buttons[week][day]
-                
-                if week < len(cal) and day < len(cal[week]) and cal[week][day] != 0:
-                    day_num = cal[week][day]
-                    btn.configure(text=str(day_num))
-                    
-                    # Check if this is today
-                    is_today = (self.display_year == self.current_date.year and 
-                               self.display_month == self.current_date.month and 
-                               day_num == self.current_date.day)
-                    
-                    # Check if this is weekend
-                    is_weekend = day == 0 or day == 6
-                    
-                    # Apply Modern-style styling
-                    if is_today:
-                        btn.configure(
-                            fg_color=self.widget_accent_color(),
-                            hover_color=self.theme["button_hover"],
-                            text_color=self.widget_on_accent_color(),
-                            font=calendar_day_font(self, self.calendar_frame, bold=True)
-                        )
-                    elif is_weekend:
-                        btn.configure(
-                            fg_color=self.theme["panel"],
-                            hover_color=self.theme["button_hover"],
-                            text_color=self.widget_accent_color(),
-                            font=calendar_day_font(self, self.calendar_frame, bold=False)
-                        )
-                    else:
-                        btn.configure(
-                            fg_color=self.theme["panel"],
-                            hover_color=self.theme["button_hover"],
-                            text_color=self.theme["text"],
-                            font=calendar_day_font(self, self.calendar_frame, bold=False)
-                        )
+                day_date = weeks[week][day]
+                is_today = day_date == today
+                is_current_month = day_date.month == self.display_month
+                is_weekend = day_date.weekday() >= 5
+                btn._optipc_calendar_date = day_date
+
+                if is_today:
+                    fg_color = CALENDAR_TODAY_COLOR
+                    hover_color = CALENDAR_TODAY_HOVER
+                    text_color = "#111111"
+                    bold = True
+                elif not is_current_month:
+                    fg_color = "transparent"
+                    hover_color = self.theme["button_hover"]
+                    text_color = self.theme.get("progress_track", self.theme.get("muted", "#666666"))
+                    bold = True
+                elif is_weekend:
+                    fg_color = "transparent"
+                    hover_color = self.theme["button_hover"]
+                    text_color = self.theme.get("muted", "#8a8a8a")
+                    bold = True
                 else:
-                    btn.configure(
-                        text="",
-                        fg_color="transparent",
-                        hover_color=self.theme["button_hover"],
-                        text_color=self.theme["text"]
-                    )
-        
-        # Update current time display
+                    fg_color = "transparent"
+                    hover_color = self.theme["button_hover"]
+                    text_color = self.theme["text"]
+                    bold = True
+
+                btn.configure(
+                    text=str(day_date.day),
+                    fg_color=fg_color,
+                    hover_color=hover_color,
+                    text_color=text_color,
+                    font=calendar_day_font(self, self.calendar_frame, bold=bold),
+                )
+
         self.update_time()
 
     def update_time(self):
@@ -802,8 +778,12 @@ class ModernCalendarWidget(ModernMiniWidget):
         day_text = btn.cget("text")
         
         if day_text:  # Only process if it's a valid day
-            day_num = int(day_text)
-            clicked_date = datetime(self.display_year, self.display_month, day_num)
+            saved_date = getattr(btn, "_optipc_calendar_date", None)
+            clicked_date = (
+                datetime(saved_date.year, saved_date.month, saved_date.day)
+                if saved_date is not None
+                else datetime(self.display_year, self.display_month, int(day_text))
+            )
             
             # Show date selection feedback
             if hasattr(self.master, 'status_service'):
