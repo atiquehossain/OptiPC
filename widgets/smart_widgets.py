@@ -20,7 +20,7 @@ try:
 except Exception:
     GPUtil = None
 
-from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH, WIDGET_SIZE_CATEGORY_BY_KEY, WIDGET_SIZES
+from config.widget_specs import widget_default_size, widget_spec
 from services.cleanup_service import CleanupService
 from widgets.base_mini_widget import BaseMiniWidget
 from widgets.window_interactions import current_widget_geometry, is_control_widget, set_widget_cursor
@@ -30,7 +30,7 @@ class SmartWidgetBase(BaseMiniWidget):
     def __init__(
         self,
         parent,
-        title: str,
+        title: str | None,
         widget_key: str,
         *,
         width: int | None = None,
@@ -40,10 +40,12 @@ class SmartWidgetBase(BaseMiniWidget):
         theme_name: str | None = None,
         size_category: str | None = None,
     ) -> None:
-        category = size_category or WIDGET_SIZE_CATEGORY_BY_KEY.get(widget_key, "default")
-        size = WIDGET_SIZES.get(category, WIDGET_SIZES["default"])
-        width = int(width if width is not None else size.get("width", DEFAULT_WIDGET_WIDTH))
-        height = int(height if height is not None else size.get("height", DEFAULT_WIDGET_HEIGHT))
+        spec = widget_spec(widget_key)
+        category = size_category or spec.size_category
+        resolved_title = title or spec.title
+        size = widget_default_size(widget_key, category)
+        width = int(width if width is not None else size["width"])
+        height = int(height if height is not None else size["height"])
         self._theme_labels: list[tuple[ctk.CTkLabel, str, int, str]] = []
         self._theme_panels: list[ctk.CTkFrame] = []
         self._theme_buttons: list[ctk.CTkButton] = []
@@ -63,7 +65,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self.MAX_HEIGHT = max(height + 90, int(height * 1.35))
         super().__init__(
             parent,
-            title,
+            resolved_title,
             width=width,
             height=height,
             x=x,

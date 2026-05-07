@@ -28,7 +28,7 @@ from config.constants import FONT_SIZES
 
 class CPUWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 40):
-        super().__init__(parent, "CPU Usage", size_category="small", x=x, y=y, widget_key="cpu")
+        super().__init__(parent, x=x, y=y, widget_key="cpu")
         self.percent_label = self.create_responsive_label(self.body, "0%", "metric", "bold")
         self.percent_label.pack(pady=(4, 2))
         self.detail_label = self.create_responsive_label(self.body, "Cores: 0", "body")
@@ -68,7 +68,7 @@ class CPUWidget(BaseMiniWidget):
 
 class RAMWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 360, y: int = 40):
-        super().__init__(parent, "RAM Usage", size_category="small", x=x, y=y, widget_key="ram")
+        super().__init__(parent, x=x, y=y, widget_key="ram")
         self.percent_label = self.create_responsive_label(self.body, "0%", "metric", "bold")
         self.percent_label.pack(pady=(6, 2))
         self.detail_label = self.create_responsive_label(self.body, "0 GB / 0 GB", "body")
@@ -108,7 +108,7 @@ class RAMWidget(BaseMiniWidget):
 
 class GPUWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 680, y: int = 40):
-        super().__init__(parent, "GPU Usage", size_category="small", x=x, y=y, widget_key="gpu")
+        super().__init__(parent, x=x, y=y, widget_key="gpu")
         self.name_label = self.create_responsive_label(self.body, "GPU: Detecting...", "label", "bold")
         self.name_label.pack(anchor="w", pady=(4, 6))
         self.percent_label = self.create_responsive_label(self.body, "N/A", "metric", "bold")
@@ -160,7 +160,7 @@ class GPUWidget(BaseMiniWidget):
 
 class PartitionsWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 250):
-        super().__init__(parent, "Drive Partitions", size_category="large", x=x, y=y, widget_key="partitions")
+        super().__init__(parent, x=x, y=y, widget_key="partitions")
         self.text = ctk.CTkTextbox(self.body, height=230, corner_radius=12)
         self.text.pack(fill="both", expand=True)
         self.apply_theme()
@@ -203,7 +203,7 @@ class PartitionsWidget(BaseMiniWidget):
 
 class StorageWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 540, y: int = 250):
-        super().__init__(parent, "SSD / HDD Summary", size_category="large", x=x, y=y, widget_key="storage")
+        super().__init__(parent, x=x, y=y, widget_key="storage")
         self.text = ctk.CTkTextbox(self.body, height=230, corner_radius=12)
         self.text.pack(fill="both", expand=True)
         self.apply_theme()
@@ -247,7 +247,7 @@ class StorageWidget(BaseMiniWidget):
 
 class CalendarWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 40, y: int = 570):
-        super().__init__(parent, "Calendar", size_category="extra_large", x=x, y=y, widget_key="calendar")
+        super().__init__(parent, x=x, y=y, widget_key="calendar")
         
         # Current date tracking
         self.current_date = datetime.now()
@@ -654,7 +654,7 @@ class CalendarWidget(BaseMiniWidget):
 
 class ClockWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 400, y: int = 40):
-        super().__init__(parent, "Clock", size_category="small", x=x, y=y, widget_key="clock")
+        super().__init__(parent, x=x, y=y, widget_key="clock")
         
         # Create UI elements
         self.create_clock_ui()
@@ -722,7 +722,7 @@ class ClockWidget(BaseMiniWidget):
 
 class UptimeWidget(BaseMiniWidget):
     def __init__(self, parent, x: int = 720, y: int = 40):
-        super().__init__(parent, "PC Uptime", size_category="small", x=x, y=y, widget_key="uptime")
+        super().__init__(parent, x=x, y=y, widget_key="uptime")
         
         # Boot time calculation
         self.boot_time = datetime.fromtimestamp(psutil.boot_time())

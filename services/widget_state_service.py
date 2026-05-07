@@ -6,13 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from config.constants import (
-    DEFAULT_WIDGET_HEIGHT,
-    DEFAULT_WIDGET_WIDTH,
     LEGACY_WIDGET_DEFAULT_SIZES,
     WIDGET_DEFAULT_SIZE_VERSION,
-    WIDGET_SIZE_CATEGORY_BY_KEY,
-    WIDGET_SIZES,
 )
+from config.widget_specs import has_widget_spec, widget_default_size
 
 
 class WidgetStateService:
@@ -56,11 +53,10 @@ class WidgetStateService:
                     size = (int(widget.get("width")), int(widget.get("height")))
                 except Exception:
                     continue
-                if size in LEGACY_WIDGET_DEFAULT_SIZES:
-                    category = WIDGET_SIZE_CATEGORY_BY_KEY.get(str(key), "default")
-                    target_size = WIDGET_SIZES.get(category, WIDGET_SIZES["default"])
-                    widget["width"] = int(target_size.get("width", DEFAULT_WIDGET_WIDTH))
-                    widget["height"] = int(target_size.get("height", DEFAULT_WIDGET_HEIGHT))
+                if size in LEGACY_WIDGET_DEFAULT_SIZES and has_widget_spec(str(key)):
+                    target_size = widget_default_size(str(key))
+                    widget["width"] = int(target_size["width"])
+                    widget["height"] = int(target_size["height"])
                     changed = True
 
         self._state["widget_default_size_version"] = WIDGET_DEFAULT_SIZE_VERSION

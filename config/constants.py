@@ -357,29 +357,7 @@ WIDGET_SIZES = {
     for key, value in WIDGET_SIZE_CLASSES.items()
 }
 
-WIDGET_SIZE_CATEGORY_BY_KEY = {
-    "cpu": "small",
-    "ram": "small",
-    "gpu": "small",
-    "clock": "small",
-    "uptime": "small",
-    "battery_health": "small",
-    "pc_health": "small",
-    "temperature": "small",
-    "network_speed": "medium",
-    "storage_cleanup": "medium",
-    "disk_io": "medium",
-    "network_quality": "medium",
-    "windows_update": "medium",
-    "storage": "large",
-    "partitions": "large",
-    "top_processes": "large",
-    "quick_actions": "large",
-    "performance_timeline": "large",
-    "calendar": "extra_large",
-}
-
-WIDGET_DEFAULT_SIZE_VERSION = 5
+WIDGET_DEFAULT_SIZE_VERSION = 6
 LEGACY_WIDGET_DEFAULT_SIZES = {
     (200, 200),
     (170, 170),
@@ -399,6 +377,7 @@ LEGACY_WIDGET_DEFAULT_SIZES = {
     (340, 240),
     (360, 270),
     (420, 260),
+    (745, 376),
 }
 
 # Widget resize limits. These keep desktop widgets usable without letting a

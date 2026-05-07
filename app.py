@@ -7,6 +7,7 @@ from tkinter import PhotoImage
 import customtkinter as ctk
 
 from config.constants import APP_NAME, THEMES, WIDGET_THEMES
+from config.widget_specs import widget_title
 from pages.about_developer_page import AboutDeveloperPage
 from pages.cleanup_page import CleanupPage
 from pages.dashboard_page import DashboardPage
@@ -407,7 +408,7 @@ class OptiPCApp(ctk.CTk):
 
     def _create_or_show_widget(self, key: str, show_toast: bool = False) -> None:
         widget = self._get_widget_ref(key)
-        title = key.replace("_", " ").title()
+        title = widget_title(key)
         if widget is None or not widget.winfo_exists():
             widget_class = self._widget_builders()[key]
             theme_name = self.get_widget_theme_name()

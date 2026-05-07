@@ -21,7 +21,7 @@ class LiquidCPUWidget(LiquidGlassWidget):
     """Liquid glass CPU widget with frosted glass appearance."""
     
     def __init__(self, parent, x: int = 40, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "CPU", size_category="small", x=x, y=y, widget_key="cpu", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="cpu", theme_name=theme_name)
         
         # Main CPU percentage display
         self.percent_label = self.create_glass_metric_label(self.body, "0%")
@@ -49,7 +49,7 @@ class LiquidCPUWidget(LiquidGlassWidget):
         self.progress = self.create_glass_progress_bar(
             self.body, 
             width=140, 
-            accent_color=self.theme.get("cpu_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, 0))
         
@@ -66,7 +66,7 @@ class LiquidCPUWidget(LiquidGlassWidget):
             self.freq_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("cpu_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -92,7 +92,7 @@ class LiquidRAMWidget(LiquidGlassWidget):
     """Liquid glass RAM widget with clean memory display."""
     
     def __init__(self, parent, x: int = 360, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Memory", size_category="small", x=x, y=y, widget_key="ram", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="ram", theme_name=theme_name)
         
         # Main memory percentage
         self.percent_label = self.create_glass_metric_label(self.body, "0%")
@@ -120,7 +120,7 @@ class LiquidRAMWidget(LiquidGlassWidget):
         self.progress = self.create_glass_progress_bar(
             self.body, 
             width=140, 
-            accent_color=self.theme.get("ram_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, 0))
         
@@ -140,7 +140,7 @@ class LiquidRAMWidget(LiquidGlassWidget):
             self.avail_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("ram_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -161,7 +161,7 @@ class LiquidGPUWidget(LiquidGlassWidget):
     """Liquid glass GPU widget with elegant display."""
     
     def __init__(self, parent, x: int = 680, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "GPU", size_category="small", x=x, y=y, widget_key="gpu", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="gpu", theme_name=theme_name)
         
         # GPU name
         self.name_label = self.create_glass_label(
@@ -190,7 +190,7 @@ class LiquidGPUWidget(LiquidGlassWidget):
         self.progress = self.create_glass_progress_bar(
             self.body, 
             width=140, 
-            accent_color=self.theme.get("gpu_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
         
@@ -217,7 +217,7 @@ class LiquidGPUWidget(LiquidGlassWidget):
             self.note_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("gpu_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -251,7 +251,7 @@ class LiquidStorageWidget(LiquidGlassWidget):
     """Liquid glass Storage widget with elegant usage display."""
     
     def __init__(self, parent, x: int = 540, y: int = 250, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Storage", size_category="large", x=x, y=y, widget_key="storage", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="storage", theme_name=theme_name)
         
         # Main storage usage
         self.usage_label = self.create_glass_metric_label(self.body, "0 GB")
@@ -270,7 +270,7 @@ class LiquidStorageWidget(LiquidGlassWidget):
         self.progress = self.create_glass_progress_bar(
             self.body, 
             width=280, 
-            accent_color=self.theme.get("storage_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
         
@@ -299,7 +299,7 @@ class LiquidStorageWidget(LiquidGlassWidget):
             self.percent_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("storage_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -338,7 +338,7 @@ class LiquidPartitionsWidget(LiquidGlassWidget):
     """Liquid glass Partitions widget with clean list layout."""
     
     def __init__(self, parent, x: int = 40, y: int = 250, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Partitions", size_category="large", x=x, y=y, widget_key="partitions", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="partitions", theme_name=theme_name)
         
         # Scrollable frame for partition list
         self.scroll_frame = ctk.CTkScrollableFrame(
@@ -387,7 +387,7 @@ class LiquidPartitionsWidget(LiquidGlassWidget):
                         child.configure(text_color=self.theme["muted"])
                 elif isinstance(child, ctk.CTkProgressBar):
                     child.configure(
-                        progress_color=self.theme.get("storage_accent", self.theme["accent"]),
+                        progress_color=self.widget_accent_color(),
                         fg_color=self.theme["progress_track"]
                     )
         except Exception:
@@ -426,7 +426,7 @@ class LiquidPartitionsWidget(LiquidGlassWidget):
         progress = self.create_glass_progress_bar(
             partition_frame,
             width=300,
-            accent_color=self.theme.get("storage_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         progress.set(percent / 100)
         progress.pack(fill="x", padx=self.SPACING_NORMAL, pady=(0, self.SPACING_NORMAL))
@@ -489,7 +489,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
     """Liquid glass Calendar widget with macOS-style design."""
     
     def __init__(self, parent, x: int = 40, y: int = 570, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Calendar", size_category="extra_large", x=x, y=y, widget_key="calendar", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="calendar", theme_name=theme_name)
         
         # Current date tracking
         from datetime import datetime
@@ -765,7 +765,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             )
         if hasattr(self, 'today_btn'):
             self.today_btn.configure(
-                fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
+                fg_color=self.widget_accent_color(),
                 hover_color=self.theme["button_hover"],
                 text_color="white"
             )
@@ -845,7 +845,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                     if is_today:
                         # Today gets accent background with white text
                         btn.configure(
-                            fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
+                            fg_color=self.widget_accent_color(),
                             hover_color=self.theme["button_hover"],
                             text_color="white",
                             font=calendar_day_font(self, self.calendar_frame, bold=True)
@@ -855,7 +855,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                         btn.configure(
                             fg_color="transparent",
                             hover_color=self.theme["button_hover"],
-                            text_color=self.theme.get("calendar_accent", self.theme["accent"]),
+                            text_color=self.widget_accent_color(),
                             font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif not is_current_month:
@@ -949,7 +949,7 @@ class LiquidClockWidget(LiquidGlassWidget):
     """Liquid glass Clock widget with elegant time display."""
     
     def __init__(self, parent, x: int = 400, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Clock", size_category="small", x=x, y=y, widget_key="clock", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="clock", theme_name=theme_name)
         
         # Create UI elements
         self.create_clock_ui()
@@ -970,7 +970,7 @@ class LiquidClockWidget(LiquidGlassWidget):
             "Loading...",
             size_key="title",
             weight="medium",
-            color_key="clock_accent"
+            color_key=self.accent_key
         )
         self.date_label.pack(pady=(0, self.SPACING_TIGHT))
         
@@ -987,7 +987,7 @@ class LiquidClockWidget(LiquidGlassWidget):
         if hasattr(self, 'time_label'):
             self.time_label.configure(text_color=self.theme["text"])
         if hasattr(self, 'date_label'):
-            self.date_label.configure(text_color=self.theme.get("clock_accent", self.theme["accent"]))
+            self.date_label.configure(text_color=self.widget_accent_color())
         if hasattr(self, 'day_label'):
             self.day_label.configure(text_color=self.theme["muted"])
 
@@ -1019,7 +1019,7 @@ class LiquidUptimeWidget(LiquidGlassWidget):
     """Liquid glass PC Uptime widget with minimal, elegant design."""
     
     def __init__(self, parent, x: int = 720, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "Uptime", size_category="small", x=x, y=y, widget_key="uptime", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="uptime", theme_name=theme_name)
         
         # Boot time calculation
         from datetime import datetime

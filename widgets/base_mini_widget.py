@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES
+from config.constants import FONT_SIZES, WIDGET_THEMES
 from widgets.headerless_edit_mode import HeaderlessEditModeMixin
 from widgets.native_window_effects import (
     TRANSPARENT_WINDOW_COLOR,
@@ -27,9 +27,10 @@ from widgets.window_interactions import (
     logical_size_delta,
     widget_point,
 )
+from widgets.widget_spec_mixin import WidgetSpecMixin
 
 
-class BaseMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
+class BaseMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel):
     """Base class for floating desktop widgets.
 
     Design goals:
@@ -47,21 +48,18 @@ class BaseMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
     def __init__(
         self,
         parent,
-        title: str,
+        title: str | None = None,
         width: int = None,
         height: int = None,
         x: int = 40,
         y: int = 40,
         widget_key: str = "",
-        size_category: str = "default",
+        size_category: str | None = None,
     ) -> None:
-        # Use standard size if dimensions not provided
+        title, widget_key, size_category = self._resolve_widget_spec_defaults(title, widget_key, size_category)
+
         if width is None or height is None:
-            size = WIDGET_SIZES.get(size_category, WIDGET_SIZES["default"])
-            width = width if width is not None else size["width"]
-            height = height if height is not None else size["height"]
-        self.widget_key = widget_key
-        self.size_category = size_category
+            width, height = self._resolve_widget_dimensions(width, height)
         configure_size_limits(self, size_category, int(width), int(height))
         if hasattr(parent, "get_widget_initial_geometry") and widget_key:
             geo = parent.get_widget_initial_geometry(widget_key, x=x, y=y, width=width, height=height)

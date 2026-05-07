@@ -12,7 +12,7 @@ class NetworkSpeedWidget(BaseMiniWidget):
     """Floating widget that shows live download and upload speed."""
 
     def __init__(self, parent, x: int = 1020, y: int = 40):
-        super().__init__(parent, "Internet Speed", size_category="medium", x=x, y=y, widget_key="network_speed")
+        super().__init__(parent, x=x, y=y, widget_key="network_speed")
 
         self.download_frame = self.create_panel(self.body)
         self.download_frame.pack(fill="x", pady=(0, 8))

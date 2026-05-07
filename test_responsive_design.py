@@ -67,6 +67,46 @@ def test_widget_sizes():
         return False
 
 
+def test_widget_specs():
+    """Test shared widget specs centralize size and accent defaults."""
+    try:
+        from config.constants import WIDGET_SIZES
+        from config.widget_specs import KNOWN_WIDGET_KEYS, widget_accent_key, widget_default_size, widget_size_category
+
+        required_keys = {
+            "cpu",
+            "ram",
+            "gpu",
+            "clock",
+            "calendar",
+            "storage",
+            "top_processes",
+            "network_speed",
+        }
+        missing = required_keys - set(KNOWN_WIDGET_KEYS)
+        if missing:
+            print(f"FAIL: Missing widget specs: {sorted(missing)}")
+            return False
+        if widget_size_category("clock") != "small":
+            print("FAIL: Clock is not using the standard small size class")
+            return False
+        if widget_accent_key("clock") != "clock_accent":
+            print("FAIL: Clock accent is not centralized")
+            return False
+        if widget_size_category("calendar") != "large":
+            print("FAIL: Calendar should default to large, not extra large")
+            return False
+        if widget_default_size("calendar") != WIDGET_SIZES["large"]:
+            print("FAIL: Calendar default size does not match the large preset")
+            return False
+
+        print("OK: Widget specs centralize default size and accent rules")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Widget spec test error: {exc}")
+        return False
+
+
 def test_responsive_fonts():
     """Test responsive font scaling."""
     try:
@@ -122,7 +162,7 @@ def test_legacy_default_size_migration():
                 (
                     '{"widgets":{"cpu":{"visible":true,"width":200,"height":200},'
                     '"network_speed":{"visible":true,"width":280,"height":210},'
-                    '"calendar":{"visible":true,"width":320,"height":240},'
+                    '"calendar":{"visible":true,"width":745,"height":376},'
                     '"custom":{"visible":true,"width":333,"height":211}},'
                     '"main_window":{}}'
                 ),
@@ -144,10 +184,10 @@ def test_legacy_default_size_migration():
             print("FAIL: Legacy medium default size was not normalized")
             return False
         if (
-            calendar.get("width") != WIDGET_SIZES["extra_large"]["width"]
-            or calendar.get("height") != WIDGET_SIZES["extra_large"]["height"]
+            calendar.get("width") != WIDGET_SIZES["large"]["width"]
+            or calendar.get("height") != WIDGET_SIZES["large"]["height"]
         ):
-            print("FAIL: Legacy extra large default size was not normalized")
+            print("FAIL: Legacy calendar default size was not normalized to large")
             return False
         if custom.get("width") != 333 or custom.get("height") != 211:
             print("FAIL: Custom widget size was changed during migration")
@@ -388,6 +428,7 @@ def main():
     tests = [
         ("Import Tests", test_imports),
         ("Widget Size Tests", test_widget_sizes),
+        ("Widget Spec Tests", test_widget_specs),
         ("Responsive Font Tests", test_responsive_fonts),
         ("Widget Size Limit Tests", test_widget_size_limits),
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),

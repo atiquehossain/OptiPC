@@ -18,7 +18,7 @@ class ModernCPUWidget(ModernMiniWidget):
     """Modern-style CPU widget with frosted glass appearance and clean design."""
     
     def __init__(self, parent, x: int = 40, y: int = 40, theme_name: str = "modern_dark"):
-        super().__init__(parent, "CPU", size_category="small", x=x, y=y, widget_key="cpu", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="cpu", theme_name=theme_name)
         
         # Main CPU percentage display
         self.percent_label = self.create_apple_metric_label(self.body, "0%")
@@ -46,7 +46,7 @@ class ModernCPUWidget(ModernMiniWidget):
         self.progress = self.create_apple_progress_bar(
             self.body, 
             width=220, 
-            accent_color=self.theme.get("cpu_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, 0))
         
@@ -63,7 +63,7 @@ class ModernCPUWidget(ModernMiniWidget):
             self.freq_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("cpu_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -89,7 +89,7 @@ class ModernRAMWidget(ModernMiniWidget):
     """Modern-style RAM widget with clean memory display."""
     
     def __init__(self, parent, x: int = 360, y: int = 40, theme_name: str = "apple_dark"):
-        super().__init__(parent, "Memory", size_category="small", x=x, y=y, widget_key="ram", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="ram", theme_name=theme_name)
         
         # Main memory percentage
         self.percent_label = self.create_apple_metric_label(self.body, "0%")
@@ -117,7 +117,7 @@ class ModernRAMWidget(ModernMiniWidget):
         self.progress = self.create_apple_progress_bar(
             self.body, 
             width=220, 
-            accent_color=self.theme.get("ram_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, 0))
         
@@ -137,7 +137,7 @@ class ModernRAMWidget(ModernMiniWidget):
             self.avail_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("ram_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -158,7 +158,7 @@ class ModernGPUWidget(ModernMiniWidget):
     """Modern-style GPU widget with elegant display."""
     
     def __init__(self, parent, x: int = 680, y: int = 40, theme_name: str = "apple_dark"):
-        super().__init__(parent, "GPU", size_category="small", x=x, y=y, widget_key="gpu", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="gpu", theme_name=theme_name)
         
         # GPU name
         self.name_label = self.create_apple_label(
@@ -187,7 +187,7 @@ class ModernGPUWidget(ModernMiniWidget):
         self.progress = self.create_apple_progress_bar(
             self.body, 
             width=220, 
-            accent_color=self.theme.get("gpu_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
         
@@ -214,7 +214,7 @@ class ModernGPUWidget(ModernMiniWidget):
             self.note_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("gpu_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -248,7 +248,7 @@ class ModernStorageWidget(ModernMiniWidget):
     """Modern-style Storage widget with elegant usage display."""
     
     def __init__(self, parent, x: int = 540, y: int = 250, theme_name: str = "apple_dark"):
-        super().__init__(parent, "Storage", size_category="large", x=x, y=y, widget_key="storage", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="storage", theme_name=theme_name)
         
         # Main storage usage
         self.usage_label = self.create_apple_metric_label(self.body, "0 GB")
@@ -267,7 +267,7 @@ class ModernStorageWidget(ModernMiniWidget):
         self.progress = self.create_apple_progress_bar(
             self.body, 
             width=240, 
-            accent_color=self.theme.get("storage_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         self.progress.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
         
@@ -296,7 +296,7 @@ class ModernStorageWidget(ModernMiniWidget):
             self.percent_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
             self.progress.configure(
-                progress_color=self.theme.get("storage_accent", self.theme["accent"]), 
+                progress_color=self.widget_accent_color(),
                 fg_color=self.theme["progress_track"]
             )
 
@@ -335,7 +335,7 @@ class ModernPartitionsWidget(ModernMiniWidget):
     """Modern-style Partitions widget with clean list layout."""
     
     def __init__(self, parent, x: int = 40, y: int = 250, theme_name: str = "apple_dark"):
-        super().__init__(parent, "Partitions", size_category="large", x=x, y=y, widget_key="partitions", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="partitions", theme_name=theme_name)
         
         # Scrollable frame for partition list
         self.scroll_frame = ctk.CTkScrollableFrame(
@@ -384,7 +384,7 @@ class ModernPartitionsWidget(ModernMiniWidget):
                         child.configure(text_color=self.theme["muted"])
                 elif isinstance(child, ctk.CTkProgressBar):
                     child.configure(
-                        progress_color=self.theme.get("storage_accent", self.theme["accent"]),
+                        progress_color=self.widget_accent_color(),
                         fg_color=self.theme["progress_track"]
                     )
         except Exception:
@@ -423,7 +423,7 @@ class ModernPartitionsWidget(ModernMiniWidget):
         progress = self.create_apple_progress_bar(
             partition_frame,
             width=300,
-            accent_color=self.theme.get("storage_accent", self.theme["accent"])
+            accent_color=self.widget_accent_color()
         )
         progress.set(percent / 100)
         progress.pack(fill="x", padx=self.SPACING_NORMAL, pady=(0, self.SPACING_NORMAL))
@@ -486,7 +486,7 @@ class ModernCalendarWidget(ModernMiniWidget):
     """Modern-style Calendar widget with clean, elegant design."""
     
     def __init__(self, parent, x: int = 40, y: int = 570, theme_name: str = "apple_dark"):
-        super().__init__(parent, "Calendar", size_category="extra_large", x=x, y=y, widget_key="calendar", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="calendar", theme_name=theme_name)
         
         # Current date tracking
         from datetime import datetime
@@ -654,7 +654,7 @@ class ModernCalendarWidget(ModernMiniWidget):
             )
         if hasattr(self, 'today_btn'):
             self.today_btn.configure(
-                fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
+                fg_color=self.widget_accent_color(),
                 hover_color=self.theme["button_hover"],
                 text_color="white"
             )
@@ -706,7 +706,7 @@ class ModernCalendarWidget(ModernMiniWidget):
                     # Apply Modern-style styling
                     if is_today:
                         btn.configure(
-                            fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
+                            fg_color=self.widget_accent_color(),
                             hover_color=self.theme["button_hover"],
                             text_color="white",
                             font=calendar_day_font(self, self.calendar_frame, bold=True)
@@ -715,7 +715,7 @@ class ModernCalendarWidget(ModernMiniWidget):
                         btn.configure(
                             fg_color=self.theme["panel"],
                             hover_color=self.theme["button_hover"],
-                            text_color=self.theme.get("calendar_accent", self.theme["accent"]),
+                            text_color=self.widget_accent_color(),
                             font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                     else:
@@ -798,7 +798,7 @@ class ModernClockWidget(ModernMiniWidget):
     """Modern-style Clock widget with elegant time display."""
     
     def __init__(self, parent, x: int = 400, y: int = 40, theme_name: str = "apple_dark"):
-        super().__init__(parent, "Clock", size_category="small", x=x, y=y, widget_key="clock", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="clock", theme_name=theme_name)
         
         # Create UI elements
         self.create_clock_ui()
@@ -819,7 +819,7 @@ class ModernClockWidget(ModernMiniWidget):
             "Loading...",
             size_key="title",
             weight="medium",
-            color_key="clock_accent"
+            color_key=self.accent_key
         )
         self.date_label.pack(pady=(0, self.SPACING_TIGHT))
         
@@ -836,7 +836,7 @@ class ModernClockWidget(ModernMiniWidget):
         if hasattr(self, 'time_label'):
             self.time_label.configure(text_color=self.theme["text"])
         if hasattr(self, 'date_label'):
-            self.date_label.configure(text_color=self.theme.get("clock_accent", self.theme["accent"]))
+            self.date_label.configure(text_color=self.widget_accent_color())
         if hasattr(self, 'day_label'):
             self.day_label.configure(text_color=self.theme["muted"])
 
@@ -868,7 +868,7 @@ class ModernUptimeWidget(ModernMiniWidget):
     """Modern-style PC Uptime widget with minimal, elegant design."""
     
     def __init__(self, parent, x: int = 720, y: int = 40, theme_name: str = "apple_dark"):
-        super().__init__(parent, "Uptime", size_category="small", x=x, y=y, widget_key="uptime", theme_name=theme_name)
+        super().__init__(parent, x=x, y=y, widget_key="uptime", theme_name=theme_name)
         
         # Boot time calculation
         from datetime import datetime
