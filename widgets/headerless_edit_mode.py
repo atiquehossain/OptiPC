@@ -41,7 +41,6 @@ class HeaderlessEditModeMixin:
         self._style_edit_remove_button()
         try:
             self.bind_all("<ButtonPress-1>", self._on_global_edit_press, add="+")
-            self.bind_all("<B1-Motion>", self._on_global_edit_drag, add="+")
             self.bind_all("<ButtonRelease-1>", self._on_global_edit_release, add="+")
         except Exception:
             pass
@@ -105,9 +104,6 @@ class HeaderlessEditModeMixin:
         except Exception:
             pass
         self._on_edit_press(event)
-
-    def _on_global_edit_drag(self, event) -> None:
-        self._on_edit_drag(event)
 
     def _on_global_edit_release(self, event) -> None:
         if self._edit_press_after_id is not None:

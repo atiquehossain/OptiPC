@@ -446,8 +446,9 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
     def start_drag(self, event) -> None:
         if self._is_resizing:
             return
-        self._drag_start_x = event.x_root - self.winfo_x()
-        self._drag_start_y = event.y_root - self.winfo_y()
+        x, y, _width, _height = current_widget_geometry(self)
+        self._drag_start_x = event.x_root - x
+        self._drag_start_y = event.y_root - y
 
     def on_title_click(self, event) -> None:
         """Handle title bar clicks with double-click detection for close and reset."""

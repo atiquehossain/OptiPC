@@ -97,10 +97,11 @@ def start_resize(window, event, direction: str) -> str:
     window._resize_dir = direction
     window._resize_start_x = event.x_root
     window._resize_start_y = event.y_root
-    window._resize_start_w = window.winfo_width()
-    window._resize_start_h = window.winfo_height()
-    window._resize_start_win_x = window.winfo_x()
-    window._resize_start_win_y = window.winfo_y()
+    x, y, width, height = current_widget_geometry(window)
+    window._resize_start_w = width
+    window._resize_start_h = height
+    window._resize_start_win_x = x
+    window._resize_start_win_y = y
     return "break"
 
 
@@ -298,6 +299,8 @@ def clamp_resize_geometry(window, direction: str, x: int | float, y: int | float
 
 
 def bind_drag_target(window, target) -> None:
+    binding_key = f"optipc_drag_{id(window)}"
+
     def on_motion(event):
         if getattr(window, "_is_resizing", False):
             return None
@@ -328,7 +331,8 @@ def bind_drag_target(window, target) -> None:
         if callable(edit_press):
             edit_press(event)
         window.start_drag(event)
-        return None
+        window._is_dragging_widget = True
+        return "break"
 
     def on_drag(event):
         if control_widget_at_event(window, event) is not None:
@@ -339,7 +343,8 @@ def bind_drag_target(window, target) -> None:
         if getattr(window, "_is_resizing", False):
             return window.on_mouse_drag(event)
         window.do_drag(event)
-        return None
+        window._is_dragging_widget = True
+        return "break"
 
     def on_release(event):
         edit_release = getattr(window, "_on_edit_release", None)
@@ -347,13 +352,14 @@ def bind_drag_target(window, target) -> None:
             edit_release(event)
         if getattr(window, "_is_resizing", False):
             return window.on_mouse_up(event)
+        window._is_dragging_widget = False
         if getattr(window, "_edit_mode", False):
-            return None
+            return "break"
         try:
             window._settle_widget_position()
         except Exception:
             pass
-        return None
+        return "break"
 
     stack = [target]
     seen: set[int] = set()
@@ -362,14 +368,27 @@ def bind_drag_target(window, target) -> None:
         if current is None or id(current) in seen:
             continue
         seen.add(id(current))
-        if current is not target and is_control_widget(current):
+        if is_control_widget(current):
             continue
+        skip_binding = current is window
         try:
-            current.bind("<Motion>", on_motion, add="+")
-            current.bind("<Leave>", on_leave, add="+")
-            current.bind("<ButtonPress-1>", on_press, add="+")
-            current.bind("<B1-Motion>", on_drag, add="+")
-            current.bind("<ButtonRelease-1>", on_release, add="+")
+            bound_windows = getattr(current, "_optipc_drag_bound_windows", None)
+            if bound_windows is None:
+                bound_windows = set()
+                setattr(current, "_optipc_drag_bound_windows", bound_windows)
+            already_bound = binding_key in bound_windows
+        except Exception:
+            bound_windows = None
+            already_bound = False
+        try:
+            if not skip_binding and not already_bound:
+                current.bind("<Motion>", on_motion, add="+")
+                current.bind("<Leave>", on_leave, add="+")
+                current.bind("<ButtonPress-1>", on_press, add="+")
+                current.bind("<B1-Motion>", on_drag, add="+")
+                current.bind("<ButtonRelease-1>", on_release, add="+")
+                if bound_windows is not None:
+                    bound_windows.add(binding_key)
         except Exception:
             pass
         try:

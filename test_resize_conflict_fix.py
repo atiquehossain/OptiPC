@@ -76,6 +76,89 @@ def test_resize_conflict_fix():
     
     return True
 
+
+def test_shared_resize_uses_logical_geometry():
+    """Shared resize starts from geometry() values, not scaled winfo sizes."""
+    from widgets.window_interactions import start_resize
+
+    class FakeWindow:
+        def geometry(self):
+            return "280x210+40+50"
+
+        def winfo_width(self):
+            return 420
+
+        def winfo_height(self):
+            return 315
+
+        def winfo_x(self):
+            return 60
+
+        def winfo_y(self):
+            return 75
+
+    class FakeEvent:
+        x_root = 200
+        y_root = 220
+
+    window = FakeWindow()
+    result = start_resize(window, FakeEvent(), "se")
+    if result != "break":
+        print("FAIL: start_resize should stop event propagation")
+        return False
+    if window._resize_start_w != 280 or window._resize_start_h != 210:
+        print("FAIL: start_resize used scaled winfo dimensions")
+        return False
+    if window._resize_start_win_x != 40 or window._resize_start_win_y != 50:
+        print("FAIL: start_resize used scaled winfo position")
+        return False
+
+    print("OK: Shared resize starts from logical geometry")
+    return True
+
+
+def test_drag_target_binding_is_idempotent():
+    """Repeated widget refreshes should not stack drag callbacks."""
+    from widgets.window_interactions import bind_drag_target
+
+    class FakeWidget:
+        def __init__(self, children=None):
+            self.children = children or []
+            self.bindings = []
+            self.master = None
+            for child in self.children:
+                child.master = self
+
+        def bind(self, sequence, handler, add=None):
+            self.bindings.append((sequence, add))
+
+        def winfo_children(self):
+            return list(self.children)
+
+    class FakeWindow(FakeWidget):
+        pass
+
+    child = FakeWidget()
+    window = FakeWindow([child])
+
+    bind_drag_target(window, window)
+    bind_drag_target(window, window)
+
+    if window.bindings:
+        print("FAIL: Toplevel received duplicate shared drag bindings")
+        return False
+    if len(child.bindings) != 5:
+        print(f"FAIL: Child expected 5 drag bindings, got {len(child.bindings)}")
+        return False
+
+    print("OK: Drag target bindings are idempotent")
+    return True
+
+
 if __name__ == "__main__":
-    success = test_resize_conflict_fix()
+    success = (
+        test_resize_conflict_fix()
+        and test_shared_resize_uses_logical_geometry()
+        and test_drag_target_binding_is_idempotent()
+    )
     sys.exit(0 if success else 1)
