@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
+from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES
 from widgets.native_window_effects import (
     TRANSPARENT_WINDOW_COLOR,
     apply_native_window_effect,
     apply_rounded_window_region,
     apply_transparent_color_key,
+)
+from widgets.responsive_layout import (
+    refresh_labels,
+    register_label,
+    responsive_font_size,
+    responsive_spacing,
 )
 from widgets.window_interactions import (
     bind_drag_target,
@@ -81,6 +87,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self._last_close_click_time = 0
         self._double_click_delay = 300  # milliseconds
         self._close_after_id = None
+        self._responsive_label_specs = []
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -141,6 +148,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         # Child controls do not exist yet, so subclasses call apply_theme()
         # after creating their own widgets.
         self._apply_base_theme()
+        self._update_responsive_layout()
 
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
@@ -197,33 +205,41 @@ class BaseMiniWidget(ctk.CTkToplevel):
         if theme_name is not None:
             self.current_theme_name = theme_name
         self._apply_base_theme()
+        self._update_responsive_layout()
         self.refresh_theme()
 
     def refresh_theme(self) -> None:
         """Override in subclasses to recolor child controls."""
 
     def get_responsive_font_size(self, size_key: str) -> int:
-        """Get fixed font size instead of responsive scaling."""
-        # Disable responsive scaling - return fixed sizes
-        fixed_sizes = {
-            "tiny": 9,
-            "small": 11,
-            "body": 12,
-            "label": 13,
-            "title": 15,
-            "metric": 18,
-            "hero": 20,
-        }
-        return fixed_sizes.get(size_key, FONT_SIZES.get(size_key, 12))
+        """Get font size scaled to the current widget geometry."""
+        return responsive_font_size(self, size_key)
 
     def create_responsive_label(self, parent, text: str, size_key: str = "body", weight: str = "normal") -> ctk.CTkLabel:
         """Create a label with responsive font size."""
         label = ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight)
+            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight),
+            justify="center",
         )
+        register_label(self, label, size_key, weight)
         return self._bind_drag_target(label)
+
+    def _update_responsive_layout(self) -> None:
+        pad_x = responsive_spacing(self, 12, 8)
+        top_y = responsive_spacing(self, 10, 6)
+        body_bottom = responsive_spacing(self, 12, 8)
+        try:
+            self.topbar.pack_configure(padx=pad_x, pady=(top_y, 4))
+            self.body.pack_configure(padx=pad_x, pady=(4, body_bottom))
+            self.title_label.configure(
+                font=ctk.CTkFont(size=self.get_responsive_font_size("title"), weight="bold"),
+                wraplength=max(60, self.winfo_width() - (pad_x * 2) - 42),
+            )
+        except Exception:
+            pass
+        refresh_labels(self)
 
     def create_panel(self, parent):
         panel = ctk.CTkFrame(parent, corner_radius=12, fg_color=self.theme["panel"])
@@ -262,6 +278,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         # Disable configure handler during resize to prevent layout conflicts
         if event.widget is self:
             self._apply_window_shape()
+            self._update_responsive_layout()
         if event.widget is not self or self._is_resizing:
             return
         if self._geometry_save_after_id is not None:

@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import customtkinter as ctk
-from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
+from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES
 from widgets.native_window_effects import (
     TRANSPARENT_WINDOW_COLOR,
     apply_rounded_window_region,
     apply_transparent_color_key,
+)
+from widgets.responsive_layout import (
+    refresh_labels,
+    register_label,
+    responsive_font_size,
+    responsive_spacing,
+    tk_font_weight,
 )
 from widgets.window_interactions import (
     bind_drag_target,
@@ -129,6 +136,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self._last_close_click_time = 0
         self._double_click_delay = 300  # milliseconds
         self._close_after_id = None
+        self._responsive_label_specs = []
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -201,6 +209,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
 
         # Apply Modern theme
         self._apply_base_theme()
+        self._update_responsive_layout()
 
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
@@ -251,24 +260,27 @@ class ModernMiniWidget(ctk.CTkToplevel):
         if theme_name is not None:
             self.current_theme_name = theme_name
         self._apply_base_theme()
+        self._update_responsive_layout()
         self.refresh_theme()
 
     def refresh_theme(self) -> None:
         """Override in subclasses to recolor child controls."""
 
     def get_responsive_font_size(self, size_key: str) -> int:
-        """Get font size that scales with widget size."""
-        font_sizes = RESPONSIVE_FONT_SIZES.get(self.size_category, RESPONSIVE_FONT_SIZES["default"])
-        return font_sizes.get(size_key, FONT_SIZES.get(size_key, 12))
+        """Get font size that scales with the current widget geometry."""
+        return responsive_font_size(self, size_key)
 
     def create_apple_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create an Modern-style label with proper typography."""
-        return self._bind_drag_target(ctk.CTkLabel(
+        label = ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight),
-            text_color=self.theme.get(color_key, self.theme["text"])
-        ))
+            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=tk_font_weight(weight)),
+            text_color=self.theme.get(color_key, self.theme["text"]),
+            justify="center",
+        )
+        register_label(self, label, size_key, weight)
+        return self._bind_drag_target(label)
 
     def create_apple_panel(self, parent, corner_radius: int = None) -> ctk.CTkFrame:
         if corner_radius is None:
@@ -299,27 +311,33 @@ class ModernMiniWidget(ctk.CTkToplevel):
         progress.set(0)
         return self._bind_drag_target(progress)
 
-    @staticmethod
-    def _tk_font_weight(weight: str) -> str:
-        return "bold" if str(weight).lower() in {"bold", "medium", "semibold"} else "normal"
-
-    def create_apple_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
-        """Create an Modern-style label with proper typography."""
-        return self._bind_drag_target(ctk.CTkLabel(
-            parent,
-            text=text,
-            font=ctk.CTkFont(size=FONT_SIZES[size_key], weight=self._tk_font_weight(weight)),
-            text_color=self.theme.get(color_key, self.theme["text"])
-        ))
-
     def create_apple_metric_label(self, parent, text: str = "0%") -> ctk.CTkLabel:
         """Create a large Modern-style metric label."""
-        return self._bind_drag_target(ctk.CTkLabel(
+        label = ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="bold"),
-            text_color=self.theme["text"]
-        ))
+            text_color=self.theme["text"],
+            justify="center",
+        )
+        register_label(self, label, "metric", "bold")
+        return self._bind_drag_target(label)
+
+    def _update_responsive_layout(self) -> None:
+        pad_x = responsive_spacing(self, self.PADDING_HORIZONTAL, 12)
+        top_y = responsive_spacing(self, self.PADDING_VERTICAL, 10)
+        spacing_tight = responsive_spacing(self, self.SPACING_TIGHT, 5)
+        body_bottom = responsive_spacing(self, self.PADDING_VERTICAL, 10)
+        try:
+            self.topbar.pack_configure(padx=pad_x, pady=(top_y, spacing_tight))
+            self.body.pack_configure(padx=pad_x, pady=(spacing_tight, body_bottom))
+            self.title_label.configure(
+                font=ctk.CTkFont(size=self.get_responsive_font_size("label"), weight="bold"),
+                wraplength=max(60, self.winfo_width() - (pad_x * 2) - 40),
+            )
+        except Exception:
+            pass
+        refresh_labels(self)
 
     def create_apple_button(
         self,
@@ -372,6 +390,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
     def _on_configure(self, event) -> None:
         if event.widget is self:
             self._apply_window_shape()
+            self._update_responsive_layout()
         if event.widget is not self:
             return
         if self._geometry_save_after_id is not None:

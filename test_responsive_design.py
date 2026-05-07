@@ -85,6 +85,60 @@ def test_responsive_fonts():
         print(f"✗ Font test error: {e}")
         return False
 
+def test_widget_size_limits():
+    """Test compact widgets cannot shrink below readable dimensions"""
+    try:
+        from config.constants import WIDGET_SIZE_LIMITS
+
+        for size_name in ("small", "default"):
+            limits = WIDGET_SIZE_LIMITS[size_name]
+            if limits["min_width"] < 190 or limits["min_height"] < 190:
+                print(f"FAIL: {size_name} minimum is too small for readable compact widgets")
+                return False
+
+        print("OK: Compact widget minimums stay readable")
+        return True
+    except Exception as e:
+        print(f"FAIL: Size limit test error: {e}")
+        return False
+
+def test_live_responsive_helper():
+    """Test live font scaling uses current widget geometry"""
+    try:
+        from widgets.responsive_layout import content_wraplength, responsive_font_size
+
+        class FakeWindow:
+            size_category = "small"
+            _default_width = 200
+            _default_height = 200
+            PADDING_HORIZONTAL = 20
+
+            def __init__(self, width, height):
+                self.width = width
+                self.height = height
+
+            def winfo_width(self):
+                return self.width
+
+            def winfo_height(self):
+                return self.height
+
+        compact = FakeWindow(190, 190)
+        roomy = FakeWindow(260, 240)
+
+        if responsive_font_size(compact, "body") > responsive_font_size(roomy, "body"):
+            print("FAIL: Compact font is larger than roomy font")
+            return False
+        if content_wraplength(compact) >= content_wraplength(roomy):
+            print("FAIL: Wrap length does not adapt to widget width")
+            return False
+
+        print("OK: Live responsive helper adapts to geometry")
+        return True
+    except Exception as e:
+        print(f"FAIL: Live responsive helper test error: {e}")
+        return False
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -93,6 +147,8 @@ def main():
         ("Import Tests", test_imports),
         ("Widget Size Tests", test_widget_sizes),
         ("Responsive Font Tests", test_responsive_fonts),
+        ("Widget Size Limit Tests", test_widget_size_limits),
+        ("Live Responsive Helper Tests", test_live_responsive_helper),
     ]
     
     passed = 0
