@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import customtkinter as ctk
 from config.constants import WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
-from widgets.native_window_effects import apply_native_window_effect
+from widgets.native_window_effects import apply_native_window_effect, apply_rounded_window_region
+from widgets.window_interactions import bind_drag_target
 
 
 class GlassWidgetCard(ctk.CTkFrame):
@@ -113,7 +114,7 @@ class GlassWidgetCard(ctk.CTkFrame):
 class LiquidGlassWidget(ctk.CTkToplevel):
     """Base widget with liquid glass material design."""
     
-    RESIZE_BORDER = 10
+    RESIZE_BORDER = 22
     MIN_WIDTH = 160
     MIN_HEIGHT = 160
     
@@ -191,7 +192,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             theme_name=self.current_theme_name,
             corner_radius=self.CORNER_RADIUS_LARGE
         )
-        self.container.pack(fill="both", expand=True, padx=6, pady=6)
+        self.container.pack(fill="both", expand=True, padx=0, pady=0)
 
         # Title bar with glass styling
         self.topbar = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -240,6 +241,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         # Prevent child widgets from handling resize events
         self.container.bind("<ButtonPress-1>", self._block_child_resize_events)
         self.body.bind("<ButtonPress-1>", self._block_child_resize_events)
+        self._install_window_interactions()
 
         self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
@@ -250,6 +252,15 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
 
+    def _install_window_interactions(self) -> None:
+        for target in (self.container, self.topbar, self.title_label, self.body):
+            bind_drag_target(self, target)
+        self._resize_grips = []
+
+    def _bind_drag_target(self, widget):
+        bind_drag_target(self, widget)
+        return widget
+
     def _get_initial_theme_name(self) -> str:
         if hasattr(self.master, "get_widget_theme_name"):
             return str(self.master.get_widget_theme_name())
@@ -257,7 +268,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
     def _apply_base_theme(self) -> None:
         self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"])
-        self.configure(fg_color=self.theme["window_bg"])
+        self.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
         self.attributes("-alpha", self.theme.get("alpha", 0.98))
         
         # Update glass container
@@ -274,18 +285,23 @@ class LiquidGlassWidget(ctk.CTkToplevel):
                 text_color=self.theme["text"]
             )
         self.after(0, self._apply_native_glass_effect)
+        self.after(0, self._apply_window_shape)
 
     def _apply_native_glass_effect(self) -> None:
-        alpha = 165 if self.current_theme_name == "glass" else 215
+        enabled = self.current_theme_name == "glass"
+        alpha = 165
         try:
             apply_native_window_effect(
                 self,
-                enabled=True,
+                enabled=enabled,
                 tint=self.theme.get("container", self.theme.get("window_bg", "#202020")),
                 alpha=alpha,
             )
         except Exception:
             pass
+
+    def _apply_window_shape(self) -> None:
+        apply_rounded_window_region(self, radius=self.CORNER_RADIUS_LARGE)
 
     def apply_theme(self, theme_name: str | None = None) -> None:
         if theme_name is not None:
@@ -316,12 +332,12 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
     def create_glass_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create a glass-style label with proper typography."""
-        return ctk.CTkLabel(
+        return self._bind_drag_target(ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=self._tk_font_weight(weight)),
             text_color=self.theme.get(color_key, self.theme["text"])
-        )
+        ))
 
     def create_glass_panel(self, parent, corner_radius: int = None, accent_tint: str = None) -> ctk.CTkFrame:
         if corner_radius is None:
@@ -333,13 +349,13 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             # Mix the accent color with the panel color at low opacity
             fg_color = self.theme[accent_tint]
             
-        return ctk.CTkFrame(
+        return self._bind_drag_target(ctk.CTkFrame(
             parent,
             corner_radius=corner_radius,
             fg_color=fg_color,
             border_width=1,
             border_color=self.theme.get("border", "transparent")
-        )
+        ))
 
     def create_glass_progress_bar(self, parent, width: int = 200, accent_color: str = None) -> ctk.CTkProgressBar:
         """Create a glass-style progress bar."""
@@ -356,16 +372,16 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             border_width=0
         )
         progress.set(0)
-        return progress
+        return self._bind_drag_target(progress)
 
     def create_glass_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create a glass-style label with proper typography."""
-        return ctk.CTkLabel(
+        return self._bind_drag_target(ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self._get_font_size(size_key), weight=self._tk_font_weight(weight)),
             text_color=self.theme.get(color_key, self.theme["text"])
-        )
+        ))
     
     def _get_font_size(self, size_key: str) -> int:
         """Get font size with glass-appropriate scaling."""
@@ -383,12 +399,12 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
     def create_glass_metric_label(self, parent, text: str = "0%") -> ctk.CTkLabel:
         """Create a large glass-style metric label."""
-        return ctk.CTkLabel(
+        return self._bind_drag_target(ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="bold"),
             text_color=self.theme["text"]
-        )
+        ))
 
     def create_glass_button(
         self,
@@ -440,6 +456,8 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
     def _on_configure(self, event) -> None:
         # Disable configure handler during resize to prevent layout conflicts
+        if event.widget is self:
+            self._apply_window_shape()
         if event.widget is not self or self._is_resizing:
             return
         if self._geometry_save_after_id is not None:
@@ -554,12 +572,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def _block_child_resize_events(self, event) -> None:
-        """Prevent child widgets from handling resize events."""
-        # Check if this is a resize attempt (near edges)
-        if self.get_resize_direction(event.x, event.y):
-            # Stop the event from propagating to prevent conflicts
-            return "break"
-        # Allow normal click events to pass through
+        """Allow shared drag/resize bindings to handle child events."""
         return None
 
     def get_resize_direction(self, x: int, y: int) -> str | None:

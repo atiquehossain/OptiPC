@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import customtkinter as ctk
 from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
+from widgets.native_window_effects import apply_rounded_window_region
+from widgets.window_interactions import bind_drag_target
 
 
 class ModernWidgetCard(ctk.CTkFrame):
@@ -50,7 +52,7 @@ class ModernWidgetCard(ctk.CTkFrame):
 class ModernMiniWidget(ctk.CTkToplevel):
     """Modern-style base widget with frosted glass appearance and premium feel."""
     
-    RESIZE_BORDER = 10
+    RESIZE_BORDER = 22
     MIN_WIDTH = 160
     MIN_HEIGHT = 160
     
@@ -128,7 +130,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
             theme_name=self.current_theme_name,
             corner_radius=self.CORNER_RADIUS_LARGE
         )
-        self.container.pack(fill="both", expand=True, padx=8, pady=8)
+        self.container.pack(fill="both", expand=True, padx=0, pady=0)
 
         # Title bar with Modern-style spacing
         self.topbar = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -146,7 +148,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         # Close button with Modern styling
         self.close_button = ctk.CTkButton(
             self.topbar,
-            text="×",
+            text="X",
             width=24,
             height=24,
             corner_radius=12,
@@ -177,6 +179,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         # Prevent child widgets from handling resize events
         self.container.bind("<ButtonPress-1>", self._block_child_resize_events)
         self.body.bind("<ButtonPress-1>", self._block_child_resize_events)
+        self._install_window_interactions()
 
         self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
@@ -187,6 +190,15 @@ class ModernMiniWidget(ctk.CTkToplevel):
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
 
+    def _install_window_interactions(self) -> None:
+        for target in (self.container, self.topbar, self.title_label, self.body):
+            bind_drag_target(self, target)
+        self._resize_grips = []
+
+    def _bind_drag_target(self, widget):
+        bind_drag_target(self, widget)
+        return widget
+
     def _get_initial_theme_name(self) -> str:
         if hasattr(self.master, "get_widget_theme_name"):
             return str(self.master.get_widget_theme_name())
@@ -194,13 +206,13 @@ class ModernMiniWidget(ctk.CTkToplevel):
 
     def _apply_base_theme(self) -> None:
         self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"])
-        self.configure(fg_color=self.theme["window_bg"])
+        self.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
         self.attributes("-alpha", self.theme.get("alpha", 0.98))
         
         # Update container styling
         if hasattr(self, 'container'):
             self.container.configure(
-                fg_color="transparent",
+                fg_color=self.theme.get("container", self.theme["window_bg"]),
                 border_color=self.theme.get("border", "transparent")
             )
         
@@ -213,6 +225,10 @@ class ModernMiniWidget(ctk.CTkToplevel):
                 hover_color=self.theme["button_hover"],
                 text_color=self.theme["text"]
             )
+        self.after(0, self._apply_window_shape)
+
+    def _apply_window_shape(self) -> None:
+        apply_rounded_window_region(self, radius=self.CORNER_RADIUS_LARGE)
 
     def apply_theme(self, theme_name: str | None = None) -> None:
         if theme_name is not None:
@@ -230,24 +246,24 @@ class ModernMiniWidget(ctk.CTkToplevel):
 
     def create_apple_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create an Modern-style label with proper typography."""
-        return ctk.CTkLabel(
+        return self._bind_drag_target(ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight),
             text_color=self.theme.get(color_key, self.theme["text"])
-        )
+        ))
 
     def create_apple_panel(self, parent, corner_radius: int = None) -> ctk.CTkFrame:
         if corner_radius is None:
             corner_radius = self.CORNER_RADIUS_MEDIUM
             
-        return ctk.CTkFrame(
+        return self._bind_drag_target(ctk.CTkFrame(
             parent,
             corner_radius=corner_radius,
             fg_color=self.theme["panel"],
             border_width=1,
             border_color=self.theme.get("border", "transparent")
-        )
+        ))
 
     def create_apple_progress_bar(self, parent, width: int = 200, accent_color: str = None) -> ctk.CTkProgressBar:
         """Create an Modern-style progress bar with rounded corners."""
@@ -264,7 +280,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
             border_width=0
         )
         progress.set(0)
-        return progress
+        return self._bind_drag_target(progress)
 
     @staticmethod
     def _tk_font_weight(weight: str) -> str:
@@ -272,21 +288,21 @@ class ModernMiniWidget(ctk.CTkToplevel):
 
     def create_apple_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create an Modern-style label with proper typography."""
-        return ctk.CTkLabel(
+        return self._bind_drag_target(ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=FONT_SIZES[size_key], weight=self._tk_font_weight(weight)),
             text_color=self.theme.get(color_key, self.theme["text"])
-        )
+        ))
 
     def create_apple_metric_label(self, parent, text: str = "0%") -> ctk.CTkLabel:
         """Create a large Modern-style metric label."""
-        return ctk.CTkLabel(
+        return self._bind_drag_target(ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="bold"),
             text_color=self.theme["text"]
-        )
+        ))
 
     def create_apple_button(
         self,
@@ -337,6 +353,8 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self.destroy_widget()
 
     def _on_configure(self, event) -> None:
+        if event.widget is self:
+            self._apply_window_shape()
         if event.widget is not self:
             return
         if self._geometry_save_after_id is not None:
@@ -451,12 +469,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def _block_child_resize_events(self, event) -> None:
-        """Prevent child widgets from handling resize events."""
-        # Check if this is a resize attempt (near edges)
-        if self.get_resize_direction(event.x, event.y):
-            # Stop the event from propagating to prevent conflicts
-            return "break"
-        # Allow normal click events to pass through
+        """Allow shared drag/resize bindings to handle child events."""
         return None
 
     def get_resize_direction(self, x: int, y: int) -> str | None:

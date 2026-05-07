@@ -3,7 +3,8 @@ from __future__ import annotations
 import customtkinter as ctk
 
 from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
-from widgets.native_window_effects import apply_native_window_effect
+from widgets.native_window_effects import apply_native_window_effect, apply_rounded_window_region
+from widgets.window_interactions import bind_drag_target
 
 
 class BaseMiniWidget(ctk.CTkToplevel):
@@ -17,7 +18,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
     - remembers size and position through the parent app
     """
 
-    RESIZE_BORDER = 10
+    RESIZE_BORDER = 22
     MIN_WIDTH = 160
     MIN_HEIGHT = 160
 
@@ -77,7 +78,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.theme = WIDGET_THEMES[self.current_theme_name]
 
         self.container = ctk.CTkFrame(self, corner_radius=24)
-        self.container.pack(fill="both", expand=True, padx=4, pady=4)
+        self.container.pack(fill="both", expand=True, padx=0, pady=0)
 
         self.topbar = ctk.CTkFrame(self.container, fg_color="transparent")
         self.topbar.pack(fill="x", padx=12, pady=(10, 4))
@@ -117,6 +118,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         # Prevent child widgets from handling resize events
         self.container.bind("<ButtonPress-1>", self._block_child_resize_events)
         self.body.bind("<ButtonPress-1>", self._block_child_resize_events)
+        self._install_window_interactions()
 
         self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
@@ -129,6 +131,15 @@ class BaseMiniWidget(ctk.CTkToplevel):
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
 
+    def _install_window_interactions(self) -> None:
+        for target in (self.container, self.topbar, self.title_label, self.body):
+            bind_drag_target(self, target)
+        self._resize_grips = []
+
+    def _bind_drag_target(self, widget):
+        bind_drag_target(self, widget)
+        return widget
+
     def _get_initial_theme_name(self) -> str:
         if hasattr(self.master, "get_widget_theme_name"):
             return str(self.master.get_widget_theme_name())
@@ -136,9 +147,9 @@ class BaseMiniWidget(ctk.CTkToplevel):
 
     def _apply_base_theme(self) -> None:
         self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["dark"])
-        self.configure(fg_color=self.theme["window_bg"])
+        self.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
         self.attributes("-alpha", self.theme.get("alpha", 1.0))
-        self.container.configure(fg_color="transparent")
+        self.container.configure(fg_color=self.theme.get("container", self.theme["window_bg"]))
         self.title_label.configure(text_color=self.theme["text"])
         self.close_button.configure(
             fg_color=self.theme["button"],
@@ -146,9 +157,10 @@ class BaseMiniWidget(ctk.CTkToplevel):
             text_color=self.theme["text"],
         )
         self.after(0, self._apply_native_glass_effect)
+        self.after(0, self._apply_window_shape)
 
     def _apply_native_glass_effect(self) -> None:
-        enabled = self.current_theme_name == "glass" or self.current_theme_name.startswith("modern_")
+        enabled = self.current_theme_name == "glass"
         alpha = 165 if self.current_theme_name == "glass" else 215
         try:
             apply_native_window_effect(
@@ -159,6 +171,9 @@ class BaseMiniWidget(ctk.CTkToplevel):
             )
         except Exception:
             pass
+
+    def _apply_window_shape(self) -> None:
+        apply_rounded_window_region(self, radius=24)
 
     def apply_theme(self, theme_name: str | None = None) -> None:
         if theme_name is not None:
@@ -185,14 +200,16 @@ class BaseMiniWidget(ctk.CTkToplevel):
 
     def create_responsive_label(self, parent, text: str, size_key: str = "body", weight: str = "normal") -> ctk.CTkLabel:
         """Create a label with responsive font size."""
-        return ctk.CTkLabel(
+        label = ctk.CTkLabel(
             parent,
             text=text,
             font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight)
         )
+        return self._bind_drag_target(label)
 
     def create_panel(self, parent):
-        return ctk.CTkFrame(parent, corner_radius=12, fg_color=self.theme["panel"])
+        panel = ctk.CTkFrame(parent, corner_radius=12, fg_color=self.theme["panel"])
+        return self._bind_drag_target(panel)
 
     def style_textbox(self, textbox) -> None:
         textbox.configure(
@@ -225,6 +242,8 @@ class BaseMiniWidget(ctk.CTkToplevel):
 
     def _on_configure(self, event) -> None:
         # Disable configure handler during resize to prevent layout conflicts
+        if event.widget is self:
+            self._apply_window_shape()
         if event.widget is not self or self._is_resizing:
             return
         if self._geometry_save_after_id is not None:
@@ -339,12 +358,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def _block_child_resize_events(self, event) -> None:
-        """Prevent child widgets from handling resize events."""
-        # Check if this is a resize attempt (near edges)
-        if self.get_resize_direction(event.x, event.y):
-            # Stop the event from propagating to prevent conflicts
-            return "break"
-        # Allow normal click events to pass through
+        """Allow shared drag/resize bindings to handle child events."""
         return None
 
     def get_resize_direction(self, x: int, y: int) -> str | None:

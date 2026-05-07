@@ -114,3 +114,25 @@ def apply_native_window_effect(window, *, enabled: bool, tint: str = "#202020", 
     if _set_composition(hwnd, ACCENT_ENABLE_BLURBEHIND, tint, alpha):
         return True
     return _set_dwm_blur(hwnd, True)
+
+
+def apply_rounded_window_region(window, *, radius: int = 24) -> bool:
+    """Clip a Tk top-level window to rounded corners on Windows."""
+    if not is_windows():
+        return False
+    hwnd = _hwnd(window)
+    if not hwnd:
+        return False
+    try:
+        width = max(int(window.winfo_width()), 1)
+        height = max(int(window.winfo_height()), 1)
+        diameter = max(int(radius) * 2, 1)
+        region = ctypes.windll.gdi32.CreateRoundRectRgn(0, 0, width + 1, height + 1, diameter, diameter)
+        if not region:
+            return False
+        applied = bool(ctypes.windll.user32.SetWindowRgn(hwnd, region, True))
+        if not applied:
+            ctypes.windll.gdi32.DeleteObject(region)
+        return applied
+    except Exception:
+        return False
