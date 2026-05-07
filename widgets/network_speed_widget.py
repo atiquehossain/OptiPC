@@ -6,7 +6,6 @@ import customtkinter as ctk
 import psutil
 
 from widgets.base_mini_widget import BaseMiniWidget
-from config.constants import FONT_SIZES
 
 
 class NetworkSpeedWidget(BaseMiniWidget):
@@ -18,41 +17,43 @@ class NetworkSpeedWidget(BaseMiniWidget):
         self.download_frame = self.create_panel(self.body)
         self.download_frame.pack(fill="x", pady=(0, 8))
 
-        self.download_title = ctk.CTkLabel(
+        self.download_title = self.create_responsive_label(
             self.download_frame,
             text="Download",
-            font=ctk.CTkFont(size=FONT_SIZES["body"]),
+            size_key="body",
         )
         self.download_title.pack(anchor="w", padx=12, pady=(8, 0))
 
-        self.download_value = ctk.CTkLabel(
+        self.download_value = self.create_responsive_label(
             self.download_frame,
             text="0 B/s",
-            font=ctk.CTkFont(size=FONT_SIZES["page_title"], weight="bold"),
+            size_key="metric",
+            weight="bold",
         )
         self.download_value.pack(anchor="w", padx=12, pady=(0, 8))
 
         self.upload_frame = self.create_panel(self.body)
         self.upload_frame.pack(fill="x", pady=(0, 8))
 
-        self.upload_title = ctk.CTkLabel(
+        self.upload_title = self.create_responsive_label(
             self.upload_frame,
             text="Upload",
-            font=ctk.CTkFont(size=FONT_SIZES["body"]),
+            size_key="body",
         )
         self.upload_title.pack(anchor="w", padx=12, pady=(8, 0))
 
-        self.upload_value = ctk.CTkLabel(
+        self.upload_value = self.create_responsive_label(
             self.upload_frame,
             text="0 B/s",
-            font=ctk.CTkFont(size=FONT_SIZES["page_title"], weight="bold"),
+            size_key="metric",
+            weight="bold",
         )
         self.upload_value.pack(anchor="w", padx=12, pady=(0, 8))
 
-        self.note_label = ctk.CTkLabel(
+        self.note_label = self.create_responsive_label(
             self.body,
             text="Live traffic, not ISP max speed",
-            font=ctk.CTkFont(size=FONT_SIZES["small"]),
+            size_key="small",
         )
         self.note_label.pack(anchor="w", pady=(4, 0))
 

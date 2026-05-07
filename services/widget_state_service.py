@@ -5,6 +5,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from config.constants import (
+    DEFAULT_WIDGET_HEIGHT,
+    DEFAULT_WIDGET_WIDTH,
+    LEGACY_WIDGET_DEFAULT_SIZES,
+    WIDGET_DEFAULT_SIZE_VERSION,
+)
+
 
 class WidgetStateService:
     """Save and load widget window state to a JSON file."""
@@ -13,10 +20,12 @@ class WidgetStateService:
         self.state_file = state_file
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
         self._state: dict[str, Any] = self._load_from_disk()
+        if self._migrate_default_widget_sizes():
+            self.save()
 
     def _load_from_disk(self) -> dict[str, Any]:
         if not self.state_file.exists():
-            return {"widgets": {}, "main_window": {}}
+            return {"widgets": {}, "main_window": {}, "widget_default_size_version": WIDGET_DEFAULT_SIZE_VERSION}
         try:
             data = json.loads(self.state_file.read_text(encoding="utf-8"))
             if isinstance(data, dict):
@@ -25,7 +34,33 @@ class WidgetStateService:
                 return data
         except Exception:
             pass
-        return {"widgets": {}, "main_window": {}}
+        return {"widgets": {}, "main_window": {}, "widget_default_size_version": WIDGET_DEFAULT_SIZE_VERSION}
+
+    def _migrate_default_widget_sizes(self) -> bool:
+        try:
+            current_version = int(self._state.get("widget_default_size_version", 0) or 0)
+        except Exception:
+            current_version = 0
+        if current_version >= WIDGET_DEFAULT_SIZE_VERSION:
+            return False
+
+        changed = False
+        widgets = self._state.setdefault("widgets", {})
+        if isinstance(widgets, dict):
+            for widget in widgets.values():
+                if not isinstance(widget, dict):
+                    continue
+                try:
+                    size = (int(widget.get("width")), int(widget.get("height")))
+                except Exception:
+                    continue
+                if size in LEGACY_WIDGET_DEFAULT_SIZES:
+                    widget["width"] = DEFAULT_WIDGET_WIDTH
+                    widget["height"] = DEFAULT_WIDGET_HEIGHT
+                    changed = True
+
+        self._state["widget_default_size_version"] = WIDGET_DEFAULT_SIZE_VERSION
+        return True if changed else current_version != WIDGET_DEFAULT_SIZE_VERSION
 
     def save(self) -> None:
         self.state_file.write_text(

@@ -20,9 +20,10 @@ try:
 except Exception:
     GPUtil = None
 
+from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH
+from services.cleanup_service import CleanupService
 from widgets.base_mini_widget import BaseMiniWidget
 from widgets.window_interactions import is_control_widget, set_widget_cursor
-from services.cleanup_service import CleanupService
 
 
 class SmartWidgetBase(BaseMiniWidget):
@@ -32,8 +33,8 @@ class SmartWidgetBase(BaseMiniWidget):
         title: str,
         widget_key: str,
         *,
-        width: int = 340,
-        height: int = 240,
+        width: int = DEFAULT_WIDGET_WIDTH,
+        height: int = DEFAULT_WIDGET_HEIGHT,
         x: int = 80,
         y: int = 80,
         theme_name: str | None = None,
@@ -49,6 +50,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self._compact_height = 92
         self._expanded_geometry: str | None = None
         self._is_compact = False
+        self._latest_compact_text = ""
         self._scheduled_after_ids: set[str] = set()
         self.MIN_WIDTH = max(300, int(width * 0.82))
         self.MIN_HEIGHT = max(210, int(height * 0.84))
@@ -65,6 +67,8 @@ class SmartWidgetBase(BaseMiniWidget):
             text=text,
             font=ctk.CTkFont(size=size, weight=weight),
             text_color=self.theme.get(color, self.theme["text"]),
+            wraplength=max(90, self._default_width - 36),
+            justify="left",
         )
         self._theme_labels.append((label, color))
         self._bind_widget_chrome(label)
@@ -226,6 +230,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self._expanded_geometry = self.geometry()
         self.body.pack_forget()
         self._is_compact = True
+        self.compact_label.configure(text=self._latest_compact_text)
         self.minsize(self.MIN_WIDTH, self._compact_height)
         self.compact_button.configure(text="+")
         width = max(self.winfo_width(), self.MIN_WIDTH)
@@ -236,6 +241,7 @@ class SmartWidgetBase(BaseMiniWidget):
             return
         self._is_compact = False
         self.body.pack(fill="both", expand=True, padx=12, pady=(4, 12))
+        self.compact_label.configure(text="")
         self.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
         self.compact_button.configure(text="-")
         if self._expanded_geometry:
@@ -246,7 +252,8 @@ class SmartWidgetBase(BaseMiniWidget):
         clean_text = " ".join(str(text).split())
         if len(clean_text) > 42:
             clean_text = clean_text[:39] + "..."
-        self.compact_label.configure(text=clean_text)
+        self._latest_compact_text = clean_text
+        self.compact_label.configure(text=clean_text if self._is_compact else "")
 
     def schedule_update(self, delay_ms: int, callback: Callable[[], None]) -> None:
         if not self._running:
@@ -357,7 +364,7 @@ class SmartWidgetBase(BaseMiniWidget):
 
 class PCHealthWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "PC Health", "pc_health", width=330, height=250, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "PC Health", "pc_health", x=x, y=y, theme_name=theme_name)
         self.score_label = self.label(self.body, "0", size=42, weight="bold")
         self.score_label.pack(anchor="w")
         self.status_label = self.label(self.body, "Checking system health", size=13, color="muted")
@@ -426,12 +433,12 @@ class PCHealthWidget(SmartWidgetBase):
 
 class TopProcessesWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 430, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "Top Processes", "top_processes", width=380, height=280, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Top Processes", "top_processes", x=x, y=y, theme_name=theme_name)
         self.rows: list[ctk.CTkLabel] = []
         self._tracked_processes: dict[int, psutil.Process] = {}
         self.summary_label = self.label(self.body, "Ranking by sampled CPU, then RAM", size=11, color="muted")
         self.summary_label.pack(anchor="w", pady=(0, 8))
-        for _ in range(6):
+        for _ in range(3):
             row = self.label(self.body, "", size=12, color="text")
             row.pack(anchor="w", fill="x", pady=2)
             self.rows.append(row)
@@ -489,7 +496,7 @@ class TopProcessesWidget(SmartWidgetBase):
 
 class BatteryHealthWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 830, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "Battery", "battery_health", width=320, height=230, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Battery", "battery_health", x=x, y=y, theme_name=theme_name)
         self.percent_label = self.label(self.body, "N/A", size=38, weight="bold")
         self.percent_label.pack(anchor="w")
         self.status_label = self.label(self.body, "Battery information unavailable", size=13, color="muted")
@@ -628,7 +635,7 @@ if ($full -and $design -and [double]$design -gt 0) {
 
 class StorageCleanupWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 360, theme_name: str | None = None):
-        super().__init__(parent, "Storage Cleanup", "storage_cleanup", width=360, height=250, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Storage Cleanup", "storage_cleanup", x=x, y=y, theme_name=theme_name)
         self.size_label = self.label(self.body, "Scan to estimate", size=28, weight="bold")
         self.size_label.pack(anchor="w")
         self.detail_label = self.label(self.body, "Safe cleanup categories only", size=12, color="muted")
@@ -681,7 +688,7 @@ class StorageCleanupWidget(SmartWidgetBase):
 
 class DiskIOWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 460, y: int = 360, theme_name: str | None = None):
-        super().__init__(parent, "Disk I/O", "disk_io", width=340, height=230, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Disk I/O", "disk_io", x=x, y=y, theme_name=theme_name)
         self.read_label = self.label(self.body, "Read 0 B/s", size=18, weight="bold")
         self.read_label.pack(anchor="w")
         self.write_label = self.label(self.body, "Write 0 B/s", size=18, weight="bold")
@@ -720,7 +727,7 @@ class DiskIOWidget(SmartWidgetBase):
 
 class NetworkQualityWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 820, y: int = 360, theme_name: str | None = None):
-        super().__init__(parent, "Network Quality", "network_quality", width=350, height=260, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Network Quality", "network_quality", x=x, y=y, theme_name=theme_name)
         self.speed_label = self.label(self.body, "0 B/s down | 0 B/s up", size=16, weight="bold")
         self.speed_label.pack(anchor="w")
         self.ip_label = self.label(self.body, f"IP: {self._local_ip()}", size=12, color="muted")
@@ -786,7 +793,7 @@ class NetworkQualityWidget(SmartWidgetBase):
 
 class WindowsUpdateWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 640, theme_name: str | None = None):
-        super().__init__(parent, "Windows Update", "windows_update", width=360, height=240, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Windows Update", "windows_update", x=x, y=y, theme_name=theme_name)
         self.status_label = self.label(self.body, "Refresh to check pending and installed updates", size=13, color="muted")
         self.status_label.pack(anchor="w", pady=(0, 12))
         self.update_label = self.label(self.body, "Last update: unknown", size=16, weight="bold")
@@ -864,7 +871,7 @@ try {
 
 class TemperatureWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 460, y: int = 640, theme_name: str | None = None):
-        super().__init__(parent, "Temperature", "temperature", width=340, height=240, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Temperature", "temperature", x=x, y=y, theme_name=theme_name)
         self._fallback_temps: list[tuple[str, float]] = []
         self._fallback_probe_running = False
         self._fallback_last_probe = 0.0
@@ -999,7 +1006,7 @@ ForEach-Object {
 
 class QuickActionsWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 820, y: int = 640, theme_name: str | None = None):
-        super().__init__(parent, "Quick Actions", "quick_actions", width=360, height=270, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Quick Actions", "quick_actions", x=x, y=y, theme_name=theme_name)
         grid = ctk.CTkFrame(self.body, fg_color="transparent")
         grid.pack(fill="both", expand=True)
         grid.grid_columnconfigure((0, 1), weight=1)
@@ -1052,7 +1059,7 @@ class QuickActionsWidget(SmartWidgetBase):
 
 class PerformanceTimelineWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 1200, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "Performance Timeline", "performance_timeline", width=420, height=260, x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, "Performance Timeline", "performance_timeline", x=x, y=y, theme_name=theme_name)
         self.metric_label = self.label(self.body, "CPU 0% | RAM 0%", size=16, weight="bold")
         self.metric_label.pack(anchor="w", pady=(0, 8))
         self.cpu_history = deque([0.0] * 50, maxlen=50)

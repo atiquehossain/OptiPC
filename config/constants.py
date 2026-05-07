@@ -323,22 +323,44 @@ WIDGET_THEMES = {
 }
 
 # Standard Widget Dimensions
+DEFAULT_WIDGET_WIDTH = 320
+DEFAULT_WIDGET_HEIGHT = 240
+UNIFORM_WIDGET_SIZE = {"width": DEFAULT_WIDGET_WIDTH, "height": DEFAULT_WIDGET_HEIGHT}
+
 WIDGET_SIZES = {
-    "small": {"width": 200, "height": 200},      # Compact widgets (CPU, RAM, GPU, Clock, Uptime)
-    "medium": {"width": 320, "height": 220},     # Medium widgets (Network Speed)
-    "large": {"width": 400, "height": 220},      # Large widgets (Storage, Partitions)
-    "extra_large": {"width": 400, "height": 420}, # Extra large widgets (Calendar)
-    "default": {"width": 200, "height": 200},    # Default size for new widgets
+    "small": dict(UNIFORM_WIDGET_SIZE),
+    "medium": dict(UNIFORM_WIDGET_SIZE),
+    "large": dict(UNIFORM_WIDGET_SIZE),
+    "extra_large": dict(UNIFORM_WIDGET_SIZE),
+    "default": dict(UNIFORM_WIDGET_SIZE),
+}
+
+WIDGET_DEFAULT_SIZE_VERSION = 2
+LEGACY_WIDGET_DEFAULT_SIZES = {
+    (200, 200),
+    (320, 220),
+    (400, 220),
+    (400, 420),
+    (330, 250),
+    (380, 280),
+    (320, 230),
+    (360, 250),
+    (340, 230),
+    (350, 260),
+    (360, 240),
+    (340, 240),
+    (360, 270),
+    (420, 260),
 }
 
 # Widget resize limits. These keep desktop widgets usable without letting a
 # saved accidental drag turn them into oversized empty panels.
 WIDGET_SIZE_LIMITS = {
-    "small": {"min_width": 190, "min_height": 190, "max_width": 340, "max_height": 300},
-    "medium": {"min_width": 280, "min_height": 190, "max_width": 560, "max_height": 380},
-    "large": {"min_width": 340, "min_height": 200, "max_width": 720, "max_height": 380},
-    "extra_large": {"min_width": 340, "min_height": 340, "max_width": 720, "max_height": 680},
-    "default": {"min_width": 190, "min_height": 190, "max_width": 460, "max_height": 380},
+    "small": {"min_width": 190, "min_height": 190, "max_width": 420, "max_height": 360},
+    "medium": {"min_width": 220, "min_height": 190, "max_width": 560, "max_height": 380},
+    "large": {"min_width": 280, "min_height": 220, "max_width": 720, "max_height": 420},
+    "extra_large": {"min_width": 320, "min_height": 240, "max_width": 720, "max_height": 680},
+    "default": {"min_width": 190, "min_height": 190, "max_width": 560, "max_height": 380},
 }
 
 DEFAULT_APP_SETTINGS = {
