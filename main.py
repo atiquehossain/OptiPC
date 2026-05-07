@@ -4,7 +4,9 @@ The app runs in normal user mode by default.
 Only selected actions (like SFC / DISM / CHKDSK) ask Windows for Administrator permission.
 """
 
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 from app import OptiPCApp
@@ -26,6 +28,29 @@ def _restore_config_files(snapshot: dict[Path, bytes | None]) -> None:
                 path.write_bytes(data)
         except Exception:
             pass
+
+
+def cleanup_stale_pyinstaller_temp_dirs() -> int:
+    """Remove stale OptiPC one-file unpack folders left after forced exits."""
+
+    current_unpack_dir = Path(getattr(sys, "_MEIPASS", "") or "").resolve() if getattr(sys, "_MEIPASS", "") else None
+    deleted = 0
+    try:
+        temp_root = Path(tempfile.gettempdir())
+        for candidate in temp_root.glob("_MEI*"):
+            try:
+                resolved = candidate.resolve()
+                if current_unpack_dir is not None and resolved == current_unpack_dir:
+                    continue
+                if not (candidate / "assets" / "optipc_icon.ico").exists():
+                    continue
+                shutil.rmtree(candidate)
+                deleted += 1
+            except Exception:
+                continue
+    except Exception:
+        return deleted
+    return deleted
 
 
 def run_smoke_test() -> int:
@@ -60,5 +85,6 @@ def run_smoke_test() -> int:
 if __name__ == "__main__":
     if "--smoke-test" in sys.argv:
         raise SystemExit(run_smoke_test())
+    cleanup_stale_pyinstaller_temp_dirs()
     app = OptiPCApp()
     app.mainloop()

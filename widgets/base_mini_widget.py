@@ -74,6 +74,9 @@ class BaseMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel):
 
         self._running = True
         self._geometry_save_after_id = None
+        self._periodic_after_ids: set[str] = set()
+        self._periodic_callbacks: dict[str, tuple[object, tuple]] = {}
+        self._updates_paused = False
         self._drag_start_x = 0
         self._drag_start_y = 0
         self._is_resizing = False
@@ -159,6 +162,63 @@ class BaseMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel):
 
         if hasattr(parent, "on_widget_visibility_changed") and widget_key:
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
+
+    def after(self, ms, func=None, *args):
+        if func is not None and self._is_periodic_update_callback(func):
+            return self._schedule_periodic_update(ms, func, *args)
+        return super().after(ms, func, *args)
+
+    @staticmethod
+    def _is_periodic_update_callback(callback) -> bool:
+        name = getattr(callback, "__name__", "")
+        return name in {"update_stats", "update_clock", "update_time", "update_uptime"}
+
+    def _widget_updates_active(self) -> bool:
+        if not getattr(self, "_running", False) or getattr(self, "_updates_paused", False):
+            return False
+        try:
+            return self.winfo_exists() and self.state() != "withdrawn"
+        except Exception:
+            return True
+
+    def _periodic_callback_key(self, callback, args: tuple) -> str:
+        owner = getattr(callback, "__self__", None)
+        name = getattr(callback, "__name__", repr(callback))
+        return f"{id(owner or self)}:{name}:{repr(args)}"
+
+    def _schedule_periodic_update(self, ms, callback, *args):
+        key = self._periodic_callback_key(callback, args)
+        self._periodic_callbacks[key] = (callback, tuple(args))
+        if not self._widget_updates_active():
+            return ""
+
+        def run_once() -> None:
+            self._periodic_after_ids.discard(after_id)
+            if self._widget_updates_active():
+                callback(*args)
+
+        after_id = super().after(ms, run_once)
+        self._periodic_after_ids.add(after_id)
+        return after_id
+
+    def _cancel_periodic_updates(self) -> None:
+        for after_id in list(getattr(self, "_periodic_after_ids", set())):
+            try:
+                super().after_cancel(after_id)
+            except Exception:
+                pass
+        self._periodic_after_ids.clear()
+
+    def _resume_periodic_updates(self) -> None:
+        if not self._widget_updates_active():
+            return
+        if getattr(self, "_periodic_after_ids", set()):
+            return
+        callbacks = list(getattr(self, "_periodic_callbacks", {}).values())
+        if not callbacks:
+            return
+        for callback, args in callbacks:
+            super().after(0, lambda cb=callback, cb_args=args: cb(*cb_args))
 
     def _install_window_interactions(self) -> None:
         for target in (self.container, self.body):
@@ -293,11 +353,14 @@ class BaseMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel):
         )
 
     def hide_widget(self) -> None:
+        self._updates_paused = True
+        self._cancel_periodic_updates()
         if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
             self.master.on_widget_visibility_changed(self.widget_key, False)
         self.withdraw()
 
     def show_widget(self) -> None:
+        self._updates_paused = False
         self.deiconify()
         self.lift()
         self.attributes("-topmost", True)
@@ -305,9 +368,11 @@ class BaseMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel):
         if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
             self.master.on_widget_visibility_changed(self.widget_key, True)
         self._save_geometry_now()
+        self._resume_periodic_updates()
 
     def destroy_widget(self) -> None:
         self._running = False
+        self._cancel_periodic_updates()
         self.destroy()
 
     def _finish_reset_and_close(self) -> None:

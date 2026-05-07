@@ -765,6 +765,41 @@ def test_smoke_test_restores_user_config():
         return False
 
 
+def test_resource_saver_guards():
+    """Test hidden widgets pause polling and stale one-file temp cleanup exists."""
+    try:
+        import inspect
+
+        import main as main_module
+        from widgets.base_mini_widget import BaseMiniWidget
+        from widgets.smart_widgets import SmartWidgetBase
+
+        base_source = inspect.getsource(BaseMiniWidget)
+        smart_source = inspect.getsource(SmartWidgetBase)
+        main_source = inspect.getsource(main_module)
+        if "def after" not in base_source or "_periodic_callbacks" not in base_source:
+            print("FAIL: Base widget periodic updates are not tracked")
+            return False
+        if "_updates_paused" not in base_source or "_cancel_periodic_updates" not in base_source:
+            print("FAIL: Base widget hidden state does not pause periodic updates")
+            return False
+        if "_scheduled_callbacks" not in smart_source or "_cancel_scheduled_updates" not in smart_source:
+            print("FAIL: Smart widget scheduled updates are not tracked")
+            return False
+        if "self._widget_updates_active()" not in smart_source:
+            print("FAIL: Smart widget updates do not check active visibility")
+            return False
+        if "cleanup_stale_pyinstaller_temp_dirs" not in main_source or "optipc_icon.ico" not in main_source:
+            print("FAIL: Stale OptiPC PyInstaller temp cleanup is missing")
+            return False
+
+        print("OK: Resource saver pauses hidden widget polling and cleans stale temp folders")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Resource saver guard test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -790,6 +825,7 @@ def main():
         ("App Theme Widget Refresh Tests", test_app_theme_change_refreshes_widgets),
         ("Main Geometry Smoke Guard Tests", test_main_geometry_skips_hidden_smoke_window),
         ("Smoke Config Restore Tests", test_smoke_test_restores_user_config),
+        ("Resource Saver Guard Tests", test_resource_saver_guards),
     ]
 
     passed = 0

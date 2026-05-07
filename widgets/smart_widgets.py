@@ -80,6 +80,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self._is_compact = False
         self._latest_compact_text = ""
         self._scheduled_after_ids: set[str] = set()
+        self._scheduled_callbacks: dict[str, Callable[[], None]] = {}
         self.MIN_WIDTH = max(150, int(width * 0.82))
         self.MIN_HEIGHT = max(150, int(height * 0.84))
         self.MAX_WIDTH = max(width + 120, int(width * 1.45))
@@ -329,17 +330,43 @@ class SmartWidgetBase(BaseMiniWidget):
     def schedule_update(self, delay_ms: int, callback: Callable[[], None]) -> None:
         if not self._running:
             return
+        callback_key = f"{id(getattr(callback, '__self__', self))}:{getattr(callback, '__name__', repr(callback))}"
+        self._scheduled_callbacks[callback_key] = callback
+        if not self._widget_updates_active():
+            return
 
         def run_once() -> None:
             self._scheduled_after_ids.discard(after_id)
-            if self._running:
+            if self._running and self._widget_updates_active():
                 callback()
 
         after_id = self.after(delay_ms, run_once)
         self._scheduled_after_ids.add(after_id)
 
+    def _cancel_scheduled_updates(self) -> None:
+        for after_id in list(self._scheduled_after_ids):
+            try:
+                self.after_cancel(after_id)
+            except Exception:
+                pass
+        self._scheduled_after_ids.clear()
+
+    def _resume_scheduled_updates(self) -> None:
+        if not self._widget_updates_active() or self._scheduled_after_ids:
+            return
+        for callback in list(self._scheduled_callbacks.values()):
+            callback()
+
+    def hide_widget(self) -> None:
+        self._cancel_scheduled_updates()
+        super().hide_widget()
+
+    def show_widget(self) -> None:
+        super().show_widget()
+        self._resume_scheduled_updates()
+
     def ui_after(self, callback: Callable[[], None]) -> None:
-        if not self._running:
+        if not self._widget_updates_active():
             return
         try:
             if self.winfo_exists():
@@ -349,12 +376,7 @@ class SmartWidgetBase(BaseMiniWidget):
 
     def destroy_widget(self) -> None:
         self._running = False
-        for after_id in list(self._scheduled_after_ids):
-            try:
-                self.after_cancel(after_id)
-            except Exception:
-                pass
-        self._scheduled_after_ids.clear()
+        self._cancel_scheduled_updates()
         super().destroy_widget()
 
     def refresh_theme(self) -> None:
