@@ -32,20 +32,26 @@ class BasePage(ctk.CTkFrame):
         header_frame.pack(fill="x", padx=UI_SPECS["cards"]["header_padding"], pady=(UI_SPECS["cards"]["header_padding"], 16))
         header_frame.grid_columnconfigure(0, weight=1)
         
-        ctk.CTkLabel(
+        title_label = ctk.CTkLabel(
             header_frame, 
             text=title, 
             font=ctk.CTkFont(size=FONT_SIZES["card_title"], weight="bold"),
-            text_color=(THEMES["light"]["text_primary"], THEMES["dark"]["text_primary"])
-        ).pack(anchor="w")
+            text_color=(THEMES["light"]["text_primary"], THEMES["dark"]["text_primary"]),
+            wraplength=420,
+            justify="left",
+        )
+        title_label.pack(anchor="w")
         
         if subtitle:
-            ctk.CTkLabel(
+            subtitle_label = ctk.CTkLabel(
                 header_frame, 
                 text=subtitle, 
                 text_color=(THEMES["light"]["text_secondary"], THEMES["dark"]["text_secondary"]), 
-                font=ctk.CTkFont(size=13)
-            ).pack(anchor="w", pady=(4, 0))
+                font=ctk.CTkFont(size=13),
+                wraplength=420,
+                justify="left",
+            )
+            subtitle_label.pack(anchor="w", pady=(4, 0))
         
         return card
 
@@ -53,9 +59,10 @@ class BasePage(ctk.CTkFrame):
         return ctk.CTkButton(
             parent, 
             text=text, 
+            width=96,
             height=UI_SPECS["buttons"]["height"], 
             corner_radius=UI_SPECS["buttons"]["corner_radius"], 
-            font=ctk.CTkFont(size=UI_SPECS["buttons"]["font_size"]),
+            font=ctk.CTkFont(size=12),
             fg_color=(THEMES["light"]["button_primary"], THEMES["dark"]["button_primary"]),
             hover_color=(THEMES["light"]["button_primary_hover"], THEMES["dark"]["button_primary_hover"]),
             text_color="#ffffff",

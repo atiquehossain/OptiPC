@@ -67,11 +67,11 @@ class Sidebar(ctk.CTkFrame):
                 corner_radius=UI_SPECS["sidebar"]["button_corner_radius"],
                 anchor="w",
                 font=ctk.CTkFont(size=14),
-                fg_color=THEMES["light"]["sidebar_button_bg"],
-                text_color=THEMES["light"]["sidebar_button_text"],
-                hover_color=THEMES["light"]["sidebar_button_hover"],
+                fg_color="transparent",
+                text_color=(THEMES["light"]["sidebar_button_text"], THEMES["dark"]["sidebar_button_text"]),
+                hover_color=(THEMES["light"]["sidebar_button_hover"], THEMES["dark"]["sidebar_button_hover"]),
                 border_width=1,
-                border_color=THEMES["light"]["border"],
+                border_color=(THEMES["light"]["border"], THEMES["dark"]["border"]),
                 command=lambda n=name: self.on_navigate(n),
             )
             button.grid(row=0, column=0, sticky="ew")
@@ -100,10 +100,10 @@ class Sidebar(ctk.CTkFrame):
                 )
             else:
                 button.configure(
-                    fg_color=THEMES["light"]["sidebar_button_bg"],
-                    text_color=THEMES["light"]["sidebar_button_text"],
-                    hover_color=THEMES["light"]["sidebar_button_hover"],
-                    border_color=THEMES["light"]["border"]
+                    fg_color="transparent",
+                    text_color=(THEMES["light"]["sidebar_button_text"], THEMES["dark"]["sidebar_button_text"]),
+                    hover_color=(THEMES["light"]["sidebar_button_hover"], THEMES["dark"]["sidebar_button_hover"]),
+                    border_color=(THEMES["light"]["border"], THEMES["dark"]["border"])
                 )
 
     def update_theme(self, appearance: str) -> None:

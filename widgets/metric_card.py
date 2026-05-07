@@ -13,6 +13,8 @@ class MetricCard(ctk.CTkFrame):
             border_width=1, 
             border_color=(THEMES["light"]["border"], THEMES["dark"]["border"])
         )
+        self.configure(height=150)
+        self.grid_propagate(False)
         
         # Header
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -23,7 +25,9 @@ class MetricCard(ctk.CTkFrame):
             header_frame, 
             text=title, 
             text_color=(THEMES["light"]["text_secondary"], THEMES["dark"]["text_secondary"]), 
-            font=ctk.CTkFont(size=12, weight="normal")
+            font=ctk.CTkFont(size=12, weight="normal"),
+            wraplength=180,
+            justify="left",
         )
         self.title_label.pack(anchor="w")
         
@@ -31,8 +35,10 @@ class MetricCard(ctk.CTkFrame):
         self.value_label = ctk.CTkLabel(
             self, 
             text=value, 
-            font=ctk.CTkFont(size=UI_SPECS["cards"]["metric_font_size"], weight="bold"),
-            text_color=(THEMES["light"]["text_primary"], THEMES["dark"]["text_primary"])
+            font=ctk.CTkFont(size=28, weight="bold"),
+            text_color=(THEMES["light"]["text_primary"], THEMES["dark"]["text_primary"]),
+            wraplength=190,
+            justify="left",
         )
         self.value_label.pack(anchor="w", padx=UI_SPECS["cards"]["content_padding"], pady=(0, UI_SPECS["cards"]["content_padding"]))
         
