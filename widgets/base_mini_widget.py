@@ -24,7 +24,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
     - remembers size and position through the parent app
     """
 
-    RESIZE_BORDER = 22
+    RESIZE_BORDER = 10
     MIN_WIDTH = 160
     MIN_HEIGHT = 160
 
@@ -414,6 +414,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
             "sw": "size_ne_sw",
             "nw": "size_nw_se",
             "se": "size_nw_se",
+            "move": "fleur",
         }
         self.configure(cursor=cursor_map.get(direction, "arrow"))
 

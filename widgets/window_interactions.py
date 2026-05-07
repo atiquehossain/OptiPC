@@ -90,11 +90,14 @@ def clamp_resize_geometry(window, direction: str, x: int | float, y: int | float
 
 def bind_drag_target(window, target) -> None:
     def on_motion(event):
-        if is_control_widget(event.widget) or getattr(window, "_is_resizing", False):
+        if getattr(window, "_is_resizing", False):
             return None
-        x, y = widget_point(window, event)
         try:
-            window.apply_cursor(window.get_resize_direction(x, y))
+            if is_control_widget(event.widget):
+                window.apply_cursor(None)
+                return None
+            x, y = widget_point(window, event)
+            window.apply_cursor(window.get_resize_direction(x, y) or "move")
         except Exception:
             pass
         return None

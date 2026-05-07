@@ -58,7 +58,7 @@ class ModernWidgetCard(ctk.CTkFrame):
 class ModernMiniWidget(ctk.CTkToplevel):
     """Modern-style base widget with frosted glass appearance and premium feel."""
     
-    RESIZE_BORDER = 22
+    RESIZE_BORDER = 10
     MIN_WIDTH = 160
     MIN_HEIGHT = 160
     
@@ -525,6 +525,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
             "sw": "size_ne_sw",
             "nw": "size_nw_se",
             "se": "size_nw_se",
+            "move": "fleur",
         }
         self.configure(cursor=cursor_map.get(direction, "arrow"))
 
