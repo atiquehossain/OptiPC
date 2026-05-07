@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 from config.constants import WIDGET_THEMES, WIDGET_SIZES
+from widgets.headerless_edit_mode import HeaderlessEditModeMixin
 from widgets.native_window_effects import (
     TRANSPARENT_WINDOW_COLOR,
     apply_native_window_effect,
@@ -132,7 +133,7 @@ class GlassWidgetCard(ctk.CTkFrame):
         self._apply_liquid_glass_effect()
 
 
-class LiquidGlassWidget(ctk.CTkToplevel):
+class LiquidGlassWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
     """Base widget with liquid glass material design."""
     
     RESIZE_BORDER = 10
@@ -201,6 +202,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self._double_click_delay = 300  # milliseconds
         self._close_after_id = None
         self._responsive_label_specs = []
+        self._init_headerless_edit_mode()
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -250,6 +252,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         # Main content area with glass spacing
         self.body = ctk.CTkFrame(self.container, fg_color="transparent")
         self.body.pack(fill="both", expand=True, padx=self.PADDING_HORIZONTAL, pady=(self.SPACING_TIGHT, self.PADDING_VERTICAL))
+        self._install_headerless_edit_mode()
 
         # Drag functionality with double-click support
         self.topbar.bind("<ButtonPress-1>", self.on_title_click)
@@ -279,12 +282,16 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             self.after(0, lambda: parent.on_widget_visibility_changed(widget_key, True))
 
     def _install_window_interactions(self) -> None:
-        for target in (self.container, self.topbar, self.title_label, self.body):
+        for target in (self.container, self.body):
             bind_drag_target(self, target)
         self._resize_grips = []
 
     def _bind_drag_target(self, widget):
         bind_drag_target(self, widget)
+        try:
+            self.after(0, lambda target=widget: bind_drag_target(self, target))
+        except Exception:
+            pass
         return widget
 
     def _get_initial_theme_name(self) -> str:
@@ -311,6 +318,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
                 hover_color=self.theme["button_hover"],
                 text_color=self.theme["text"]
             )
+        self._style_edit_remove_button()
         self.after(0, self._apply_native_glass_effect)
         self.after(0, self._apply_window_shape)
 
@@ -413,8 +421,9 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         spacing_tight = responsive_spacing(self, self.SPACING_TIGHT, 5)
         body_bottom = responsive_spacing(self, self.PADDING_VERTICAL, 10)
         try:
-            self.topbar.pack_configure(padx=pad_x, pady=(top_y, spacing_tight))
-            self.body.pack_configure(padx=pad_x, pady=(spacing_tight, body_bottom))
+            if not self._pack_headerless_body(padx=pad_x, pady=(top_y, body_bottom)):
+                self.topbar.pack_configure(padx=pad_x, pady=(top_y, spacing_tight))
+                self.body.pack_configure(padx=pad_x, pady=(spacing_tight, body_bottom))
             self.title_label.configure(
                 font=ctk.CTkFont(size=self.get_responsive_font_size("label"), weight="bold"),
                 wraplength=max(60, self.winfo_width() - (pad_x * 2) - 40),
@@ -488,6 +497,8 @@ class LiquidGlassWidget(ctk.CTkToplevel):
 
     def _save_geometry_now(self) -> None:
         self._geometry_save_after_id = None
+        if getattr(self, "_suppress_geometry_save", False) or getattr(self, "_edit_mode", False):
+            return
         if not self.widget_key or not hasattr(self.master, "save_widget_geometry"):
             return
         try:
@@ -601,6 +612,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
     def do_drag(self, event) -> None:
         if self._is_resizing:
             return
+        self._exit_edit_mode(restore=False)
         x = event.x_root - self._drag_start_x
         y = event.y_root - self._drag_start_y
         self.geometry(f"+{x}+{y}")

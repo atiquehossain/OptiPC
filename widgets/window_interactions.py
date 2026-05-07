@@ -324,31 +324,55 @@ def bind_drag_target(window, target) -> None:
         direction = window.get_resize_direction(x, y)
         if direction:
             return start_resize(window, event, direction)
+        edit_press = getattr(window, "_on_edit_press", None)
+        if callable(edit_press):
+            edit_press(event)
         window.start_drag(event)
         return None
 
     def on_drag(event):
         if control_widget_at_event(window, event) is not None:
             return None
+        edit_drag = getattr(window, "_on_edit_drag", None)
+        if callable(edit_drag):
+            edit_drag(event)
         if getattr(window, "_is_resizing", False):
             return window.on_mouse_drag(event)
         window.do_drag(event)
         return None
 
     def on_release(event):
+        edit_release = getattr(window, "_on_edit_release", None)
+        if callable(edit_release):
+            edit_release(event)
         if getattr(window, "_is_resizing", False):
             return window.on_mouse_up(event)
+        if getattr(window, "_edit_mode", False):
+            return None
         try:
             window._settle_widget_position()
         except Exception:
             pass
         return None
 
-    try:
-        target.bind("<Motion>", on_motion, add="+")
-        target.bind("<Leave>", on_leave, add="+")
-        target.bind("<ButtonPress-1>", on_press, add="+")
-        target.bind("<B1-Motion>", on_drag, add="+")
-        target.bind("<ButtonRelease-1>", on_release, add="+")
-    except Exception:
-        pass
+    stack = [target]
+    seen: set[int] = set()
+    while stack:
+        current = stack.pop()
+        if current is None or id(current) in seen:
+            continue
+        seen.add(id(current))
+        if current is not target and is_control_widget(current):
+            continue
+        try:
+            current.bind("<Motion>", on_motion, add="+")
+            current.bind("<Leave>", on_leave, add="+")
+            current.bind("<ButtonPress-1>", on_press, add="+")
+            current.bind("<B1-Motion>", on_drag, add="+")
+            current.bind("<ButtonRelease-1>", on_release, add="+")
+        except Exception:
+            pass
+        try:
+            stack.extend(current.winfo_children())
+        except Exception:
+            pass
