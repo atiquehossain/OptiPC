@@ -346,6 +346,41 @@ def test_calendar_size_classes():
         return False
 
 
+def test_widget_material_modes():
+    """Test Liquid Glass color modes resolve to readable Mac-style palettes."""
+    try:
+        from config.constants import WIDGET_THEMES
+        from services.widget_material_service import resolve_widget_material_theme
+
+        base = WIDGET_THEMES["modern_dark"]
+        full_color = resolve_widget_material_theme(base, mode="full_color", appearance="Dark", wallpaper_path="")
+        monochrome = resolve_widget_material_theme(base, mode="monochrome", appearance="Dark", wallpaper_path="")
+        tinted = resolve_widget_material_theme(base, mode="tinted", appearance="Dark", wallpaper_path="")
+        automatic_idle = resolve_widget_material_theme(base, mode="automatic", appearance="Dark", wallpaper_path="", active=False)
+
+        if full_color["cpu_accent"] == full_color["ram_accent"]:
+            print("FAIL: Full color mode flattened widget accent colors")
+            return False
+        if monochrome["cpu_accent"] != monochrome["ram_accent"]:
+            print("FAIL: Monochrome mode did not flatten accent colors")
+            return False
+        if automatic_idle["material_mode"] != "monochrome":
+            print("FAIL: Automatic idle mode did not resolve to monochrome")
+            return False
+        if not tinted.get("wallpaper_tint") or tinted["material_mode"] != "tinted":
+            print("FAIL: Tinted mode did not expose wallpaper tint state")
+            return False
+        if not all(theme.get("native_blur") for theme in (full_color, monochrome, tinted)):
+            print("FAIL: Material modes did not request native blur")
+            return False
+
+        print("OK: Widget material modes resolve correctly")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Widget material mode test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -361,6 +396,7 @@ def main():
         ("Scaled Screen Edge Placement Tests", test_scaled_screen_edge_uses_logical_size),
         ("App Right Column Placement Tests", test_app_overlap_placement_keeps_right_column),
         ("Calendar Size Class Tests", test_calendar_size_classes),
+        ("Widget Material Mode Tests", test_widget_material_modes),
     ]
 
     passed = 0

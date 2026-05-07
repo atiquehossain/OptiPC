@@ -5,6 +5,7 @@ from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES
 from widgets.headerless_edit_mode import HeaderlessEditModeMixin
 from widgets.native_window_effects import (
     TRANSPARENT_WINDOW_COLOR,
+    apply_native_window_effect,
     apply_rounded_window_region,
     apply_transparent_color_key,
 )
@@ -142,6 +143,7 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         self._double_click_delay = 300  # milliseconds
         self._close_after_id = None
         self._responsive_label_specs = []
+        self._widget_material_active = True
         self._init_headerless_edit_mode()
 
         self.title(title)
@@ -213,6 +215,7 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
 
         self.bind("<Configure>", self._on_configure)
         self.protocol("WM_DELETE_WINDOW", self.hide_widget)
+        self._install_material_state_bindings()
 
         # Apply Modern theme
         self._apply_base_theme()
@@ -239,8 +242,33 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
             return str(self.master.get_widget_theme_name())
         return "modern_dark"
 
+    def _resolved_widget_theme(self) -> dict:
+        if hasattr(self.master, "resolve_widget_theme"):
+            try:
+                return dict(self.master.resolve_widget_theme(self.current_theme_name, active=self._widget_material_active))
+            except Exception:
+                pass
+        return dict(WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"]))
+
+    def _install_material_state_bindings(self) -> None:
+        self.bind("<Enter>", lambda _event: self._set_material_active(True), add="+")
+        self.bind("<FocusIn>", lambda _event: self._set_material_active(True), add="+")
+        self.bind("<Leave>", lambda _event: self._set_material_active(False), add="+")
+        self.bind("<FocusOut>", lambda _event: self._set_material_active(False), add="+")
+
+    def _set_material_active(self, active: bool) -> None:
+        if self._widget_material_active == bool(active):
+            return
+        self._widget_material_active = bool(active)
+        try:
+            if self.winfo_exists():
+                self._apply_base_theme()
+                self.refresh_theme()
+        except Exception:
+            pass
+
     def _apply_base_theme(self) -> None:
-        self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"])
+        self.theme = self._resolved_widget_theme()
         self.configure(fg_color=TRANSPARENT_WINDOW_COLOR)
         self.attributes("-alpha", self.theme.get("alpha", 0.98))
         apply_transparent_color_key(self)
@@ -263,7 +291,19 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
                 text_color=self.theme["text"]
             )
         self._style_edit_remove_button()
+        self.after(0, self._apply_native_glass_effect)
         self.after(0, self._apply_window_shape)
+
+    def _apply_native_glass_effect(self) -> None:
+        try:
+            apply_native_window_effect(
+                self,
+                enabled=bool(self.theme.get("native_blur", False)),
+                tint=self.theme.get("blur_tint", self.theme.get("container", self.theme.get("window_bg", "#202020"))),
+                alpha=int(self.theme.get("blur_alpha", 165)),
+            )
+        except Exception:
+            pass
 
     def _apply_window_shape(self) -> None:
         apply_rounded_window_region(self, radius=self.CORNER_RADIUS_LARGE)

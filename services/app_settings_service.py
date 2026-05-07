@@ -47,3 +47,10 @@ class AppSettingsService:
     def set_widget_theme(self, theme_name: str) -> None:
         self._settings["widget_theme"] = theme_name
         self.save()
+
+    def get_widget_color_mode(self) -> str:
+        return str(self._settings.get("widget_color_mode", DEFAULT_APP_SETTINGS["widget_color_mode"]))
+
+    def set_widget_color_mode(self, mode: str) -> None:
+        self._settings["widget_color_mode"] = mode
+        self.save()

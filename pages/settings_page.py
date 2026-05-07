@@ -16,14 +16,18 @@ class SettingsPage(BasePage):
         action_service,
         appearance_callback,
         widget_theme_callback,
+        widget_color_mode_callback,
         current_appearance: str,
         current_widget_theme_label: str,
+        current_widget_color_mode_label: str,
     ) -> None:
         super().__init__(parent, logger, status_service, system_service, action_service)
         self.appearance_callback = appearance_callback
         self.widget_theme_callback = widget_theme_callback
+        self.widget_color_mode_callback = widget_color_mode_callback
         self.current_appearance = current_appearance
         self.current_widget_theme_label = current_widget_theme_label
+        self.current_widget_color_mode_label = current_widget_color_mode_label
 
     def build(self) -> None:
         wrapper = ctk.CTkScrollableFrame(self, fg_color="transparent")
@@ -47,9 +51,18 @@ class SettingsPage(BasePage):
         widget_mode.pack(anchor="w", padx=18, pady=(0, 18))
         widget_mode.set(self.current_widget_theme_label)
 
+        ctk.CTkLabel(appearance, text="Widget color").pack(anchor="w", padx=18, pady=(0, 6))
+        widget_color = ctk.CTkSegmentedButton(
+            appearance,
+            values=["Automatic", "Full Color", "Monochrome", "Tinted"],
+            command=self._change_widget_color_mode,
+        )
+        widget_color.pack(anchor="w", padx=18, pady=(0, 18))
+        widget_color.set(self.current_widget_color_mode_label)
+
         ctk.CTkLabel(
             appearance,
-            text="Widgets update live. Try switching between Dark, Light, Liquid Glass, and Modern styles while widgets are open.",
+            text="Widgets update live. Automatic color uses full color while active and quiet monochrome while idle. Tinted samples your current wallpaper color.",
             justify="left",
             wraplength=420,
             text_color="gray75",
@@ -92,6 +105,9 @@ class SettingsPage(BasePage):
 
     def _change_widget_theme(self, value: str) -> None:
         self.widget_theme_callback(value)
+
+    def _change_widget_color_mode(self, value: str) -> None:
+        self.widget_color_mode_callback(value)
 
     def _minimize_to_tray(self) -> None:
         app = self.winfo_toplevel()

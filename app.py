@@ -6,7 +6,7 @@ from tkinter import PhotoImage
 
 import customtkinter as ctk
 
-from config.constants import APP_NAME, THEMES
+from config.constants import APP_NAME, THEMES, WIDGET_THEMES
 from pages.about_developer_page import AboutDeveloperPage
 from pages.cleanup_page import CleanupPage
 from pages.dashboard_page import DashboardPage
@@ -26,6 +26,12 @@ from services.system_service import SystemService
 from services.wallpaper_service import WallpaperService
 from services.widget_state_service import WidgetStateService
 from services.system_tray_service import SystemTrayService
+from services.widget_material_service import (
+    normalize_widget_color_mode,
+    resolve_widget_material_theme,
+    widget_color_mode_label,
+    widget_color_mode_value,
+)
 from ui.sidebar import Sidebar
 from ui.statusbar import StatusBar
 from ui.topbar import Topbar
@@ -74,6 +80,7 @@ class OptiPCApp(ctk.CTk):
         self.cleanup_service = CleanupService()
         self.recovery_service = RecoveryService()
         self.wallpaper_service = WallpaperService()
+        self._wallpaper_path_cache: str | None = None
 
         self.report_dir = Path.home() / "OptiPCReports"
         self.report_dir.mkdir(parents=True, exist_ok=True)
@@ -242,6 +249,32 @@ class OptiPCApp(ctk.CTk):
 
     def get_widget_theme_name(self) -> str:
         return self.app_settings.get_widget_theme()
+
+    def get_widget_color_mode(self) -> str:
+        return normalize_widget_color_mode(self.app_settings.get_widget_color_mode())
+
+    def _current_wallpaper_path(self) -> str:
+        if self._wallpaper_path_cache is not None:
+            return self._wallpaper_path_cache
+        try:
+            current = self.wallpaper_service.get_current_wallpaper()
+            if current:
+                self._wallpaper_path_cache = current
+        except Exception:
+            pass
+        if self._wallpaper_path_cache is None:
+            self._wallpaper_path_cache = ""
+        return self._wallpaper_path_cache
+
+    def resolve_widget_theme(self, theme_name: str, *, active: bool = True) -> dict:
+        base_theme = WIDGET_THEMES.get(theme_name, WIDGET_THEMES["modern_dark"])
+        return resolve_widget_material_theme(
+            base_theme,
+            mode=self.get_widget_color_mode(),
+            appearance=self.app_settings.get_appearance_mode(),
+            wallpaper_path=self._current_wallpaper_path(),
+            active=active,
+        )
 
     def apply_widget_theme_to_open_widgets(self) -> None:
         theme_name = self.get_widget_theme_name()
@@ -518,6 +551,7 @@ class OptiPCApp(ctk.CTk):
                 "modern_dark": "Modern Dark",
                 "modern_light": "Modern Light",
             }.get(self.app_settings.get_widget_theme(), "Dark")
+            widget_color_mode = widget_color_mode_label(self.app_settings.get_widget_color_mode())
             return SettingsPage(
                 self.content,
                 self.logger,
@@ -526,8 +560,10 @@ class OptiPCApp(ctk.CTk):
                 self.action_service,
                 self.change_theme,
                 self.change_widget_theme,
+                self.change_widget_color_mode,
                 self.app_settings.get_appearance_mode(),
                 widget_theme_label,
+                widget_color_mode,
             )
         raise ValueError(f"Unknown page: {page_name}")
 
@@ -564,6 +600,13 @@ class OptiPCApp(ctk.CTk):
         self.app_settings.set_widget_theme(theme_name)
         self.apply_widget_theme_to_open_widgets()
         self.status_service.success(f"Widget theme changed to {label}", toast=True)
+
+    def change_widget_color_mode(self, label: str) -> None:
+        mode = widget_color_mode_value(label)
+        self.app_settings.set_widget_color_mode(mode)
+        self._wallpaper_path_cache = None
+        self.apply_widget_theme_to_open_widgets()
+        self.status_service.success(f"Widget color changed to {label}", toast=True)
 
     # Backward-compatible toggle methods used by the Dashboard buttons
     def toggle_cpu_widget(self) -> None:
