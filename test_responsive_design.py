@@ -78,6 +78,7 @@ def test_widget_specs():
             "ram",
             "gpu",
             "clock",
+            "world_clock",
             "calendar",
             "storage",
             "bluetooth",
@@ -93,6 +94,9 @@ def test_widget_specs():
             return False
         if widget_accent_key("clock") != "clock_accent":
             print("FAIL: Clock accent is not centralized")
+            return False
+        if widget_accent_key("world_clock") != "clock_accent":
+            print("FAIL: World clock accent is not centralized")
             return False
         if widget_accent_key("bluetooth") != "bluetooth_accent":
             print("FAIL: Bluetooth accent is not centralized")

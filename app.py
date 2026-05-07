@@ -58,6 +58,7 @@ from widgets.smart_widgets import (
     TemperatureWidget,
     TopProcessesWidget,
     WindowsUpdateWidget,
+    WorldClockWidget,
 )
 from widgets.toast import ToastManager
 from widgets.window_interactions import (
@@ -229,6 +230,7 @@ class OptiPCApp(ctk.CTk):
             "temperature": TemperatureWidget,
             "quick_actions": QuickActionsWidget,
             "performance_timeline": PerformanceTimelineWidget,
+            "world_clock": WorldClockWidget,
         }
         
         # Use liquid glass widgets for the Liquid Glass and modern themes.
@@ -686,6 +688,9 @@ class OptiPCApp(ctk.CTk):
 
     def toggle_performance_timeline_widget(self) -> None:
         self._toggle_widget("performance_timeline")
+
+    def toggle_world_clock_widget(self) -> None:
+        self._toggle_widget("world_clock")
 
 
 SmartPCToolkitApp = OptiPCApp

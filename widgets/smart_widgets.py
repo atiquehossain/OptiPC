@@ -9,8 +9,10 @@ import tkinter as tk
 import tempfile
 import xml.etree.ElementTree as ET
 from collections import deque
+from datetime import datetime
 from pathlib import Path
 from typing import Callable
+from zoneinfo import ZoneInfo
 
 import customtkinter as ctk
 import psutil
@@ -1229,6 +1231,123 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
             canvas.create_arc(cx - size * 0.58, cy - size * 0.48, cx + size * 0.58, cy + size * 0.6, start=20, extent=140, style="arc", outline=color, width=width)
             canvas.create_rectangle(cx - size * 0.62, cy + size * 0.03, cx - size * 0.38, cy + size * 0.48, outline=color, width=width)
             canvas.create_rectangle(cx + size * 0.38, cy + size * 0.03, cx + size * 0.62, cy + size * 0.48, outline=color, width=width)
+
+
+class WorldClockWidget(SmartWidgetBase):
+    """Compact multi-timezone clock using the shared smart-widget shell."""
+
+    DEFAULT_ZONES = (
+        ("Local", None),
+        ("Dhaka", "Asia/Dhaka"),
+        ("London", "Europe/London"),
+        ("NYC", "America/New_York"),
+    )
+
+    def __init__(self, parent, x: int = 400, y: int = 360, theme_name: str | None = None):
+        super().__init__(parent, None, "world_clock", x=x, y=y, theme_name=theme_name)
+        self.clock_canvas = tk.Canvas(self.body, bg=self.theme["panel"], highlightthickness=0, bd=0)
+        self._theme_canvases.append(self.clock_canvas)
+        self.clock_canvas.pack(fill="both", expand=True)
+        self.clock_canvas.bind("<Configure>", lambda _event: self._draw_world_clocks(), add="+")
+        self._bind_widget_chrome(self.clock_canvas)
+        self.apply_theme()
+        self.update_clock()
+
+    def refresh_theme(self) -> None:
+        super().refresh_theme()
+        canvas = getattr(self, "clock_canvas", None)
+        if canvas is not None:
+            canvas.configure(bg=self.theme["panel"])
+            self._draw_world_clocks()
+
+    def update_clock(self) -> None:
+        if not self._running:
+            return
+        self._draw_world_clocks()
+        local_time = self._zone_time("Local", None)
+        self.set_compact_text(f"Local {local_time['time']} {local_time['ampm']}")
+        self.schedule_update(1000, self.update_clock)
+
+    def _zone_time(self, label: str, zone_name: str | None) -> dict[str, str]:
+        try:
+            now = datetime.now().astimezone() if zone_name is None else datetime.now(ZoneInfo(zone_name))
+        except Exception:
+            now = datetime.now().astimezone()
+        local_today = datetime.now().astimezone().date()
+        date_delta = (now.date() - local_today).days
+        if date_delta == 0:
+            date_label = "Today"
+        elif date_delta == 1:
+            date_label = "Tomorrow"
+        elif date_delta == -1:
+            date_label = "Yesterday"
+        else:
+            date_label = now.strftime("%b %d")
+        return {
+            "label": label,
+            "time": now.strftime("%I:%M").lstrip("0"),
+            "ampm": now.strftime("%p"),
+            "date": date_label,
+        }
+
+    def _draw_world_clocks(self) -> None:
+        canvas = getattr(self, "clock_canvas", None)
+        if canvas is None:
+            return
+        canvas.delete("all")
+        width = max(int(canvas.winfo_width()), 120)
+        height = max(int(canvas.winfo_height()), 98)
+        panel = self.theme.get("panel", "#1f1f22")
+        text = self.theme.get("text", "#ffffff")
+        muted = self.theme.get("muted", "#a8a8ad")
+        accent = self.widget_accent_color()
+        border = self.theme.get("border", self.theme.get("progress_track", "#3a3a3f"))
+        canvas.create_rectangle(0, 0, width, height, fill=panel, outline="")
+
+        cell_w = width / 2.0
+        cell_h = height / 2.0
+        compact = cell_w < 82 or cell_h < 62
+        label_size = max(8, min(11, responsive_font_size(self, "tiny")))
+        time_size = max(12, min(17, responsive_font_size(self, "title") - (2 if compact else 0)))
+        suffix_size = max(7, min(9, responsive_font_size(self, "tiny")))
+        date_size = max(7, min(9, responsive_font_size(self, "tiny")))
+
+        canvas.create_line(cell_w, 8, cell_w, height - 8, fill=border, width=1)
+        canvas.create_line(8, cell_h, width - 8, cell_h, fill=border, width=1)
+
+        for index, (label, zone_name) in enumerate(self.DEFAULT_ZONES):
+            row = index // 2
+            column = index % 2
+            x0 = column * cell_w
+            y0 = row * cell_h
+            cx = x0 + cell_w / 2.0
+            label_y = y0 + max(11, cell_h * 0.18)
+            time_y = y0 + cell_h * (0.52 if compact else 0.50)
+            date_y = y0 + cell_h - max(10, cell_h * 0.17)
+            info = self._zone_time(label, zone_name)
+            label_color = accent if index == 0 else muted
+            canvas.create_text(
+                cx,
+                label_y,
+                text=info["label"],
+                fill=label_color,
+                font=("Segoe UI", label_size, "bold"),
+            )
+            canvas.create_text(
+                cx,
+                time_y,
+                text=info["time"],
+                fill=text,
+                font=("Segoe UI", time_size, "bold"),
+            )
+            if cell_w >= 70:
+                canvas.create_text(
+                    cx,
+                    date_y,
+                    text=info["date"] if not compact else info["ampm"],
+                    fill=muted,
+                    font=("Segoe UI", date_size if not compact else suffix_size),
+                )
 
 
 class WindowsUpdateWidget(SmartWidgetBase):

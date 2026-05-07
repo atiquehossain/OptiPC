@@ -30,6 +30,7 @@ _WIDGET_SPECS: dict[str, WidgetSpec] = {
     "ram": WidgetSpec("ram", "Memory", "small", "ram_accent", "metric"),
     "gpu": WidgetSpec("gpu", "GPU", "small", "gpu_accent", "metric"),
     "clock": WidgetSpec("clock", "Clock", "small", "clock_accent", "clock"),
+    "world_clock": WidgetSpec("world_clock", "World Clock", "small", "clock_accent", "clock"),
     "uptime": WidgetSpec("uptime", "Uptime", "small", "runtime_accent", "metric"),
     "pc_health": WidgetSpec("pc_health", "PC Health", "small", "accent", "metric"),
     "battery_health": WidgetSpec("battery_health", "Battery", "small", "accent", "metric"),

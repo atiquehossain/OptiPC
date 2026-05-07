@@ -211,6 +211,7 @@ NAVIGATION_ICONS = {
 # Dashboard Icons
 DASHBOARD_ICONS = {
     "Bluetooth Widget": "BT",
+    "World Clock Widget": "WC",
     "CPU Usage": "💻",
     "RAM Total": "🧠",
     "Disk Free": "💾",
