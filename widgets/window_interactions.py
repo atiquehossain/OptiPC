@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import ctypes
+
+from config.constants import WIDGET_SIZE_LIMITS
+
 
 CONTROL_CLASS_NAMES = {
     "CTkButton",
@@ -31,6 +35,57 @@ def start_resize(window, event, direction: str) -> str:
     window._resize_start_win_x = window.winfo_x()
     window._resize_start_win_y = window.winfo_y()
     return "break"
+
+
+def configure_size_limits(window, size_category: str, default_width: int, default_height: int) -> None:
+    limits = WIDGET_SIZE_LIMITS.get(size_category, WIDGET_SIZE_LIMITS["default"])
+    min_width = max(int(getattr(window, "MIN_WIDTH", 0) or 0), int(limits["min_width"]))
+    min_height = max(int(getattr(window, "MIN_HEIGHT", 0) or 0), int(limits["min_height"]))
+
+    requested_max_width = getattr(window, "MAX_WIDTH", None)
+    requested_max_height = getattr(window, "MAX_HEIGHT", None)
+    max_width = int(requested_max_width) if requested_max_width is not None else int(limits["max_width"])
+    max_height = int(requested_max_height) if requested_max_height is not None else int(limits["max_height"])
+
+    window._default_width = int(default_width)
+    window._default_height = int(default_height)
+    window.MIN_WIDTH = min_width
+    window.MIN_HEIGHT = min_height
+    window.MAX_WIDTH = max(min_width, max_width)
+    window.MAX_HEIGHT = max(min_height, max_height)
+
+
+def clamp_widget_size(window, width: int | float, height: int | float) -> tuple[int, int]:
+    clamped_width = max(int(getattr(window, "MIN_WIDTH", 160)), min(int(width), int(getattr(window, "MAX_WIDTH", width))))
+    clamped_height = max(int(getattr(window, "MIN_HEIGHT", 160)), min(int(height), int(getattr(window, "MAX_HEIGHT", height))))
+    return clamped_width, clamped_height
+
+
+def clamp_widget_position(window, x: int | float, y: int | float, width: int | float, height: int | float) -> tuple[int, int]:
+    x = int(x)
+    y = int(y)
+    try:
+        user32 = ctypes.windll.user32
+        virtual_x = int(user32.GetSystemMetrics(76))
+        virtual_y = int(user32.GetSystemMetrics(77))
+        virtual_width = int(user32.GetSystemMetrics(78))
+        virtual_height = int(user32.GetSystemMetrics(79))
+        if virtual_width > 0 and virtual_height > 0:
+            max_x = virtual_x + virtual_width - int(width)
+            max_y = virtual_y + virtual_height - int(height)
+            return max(virtual_x, min(x, max_x)), max(virtual_y, min(y, max_y))
+    except Exception:
+        pass
+    return x, y
+
+
+def clamp_resize_geometry(window, direction: str, x: int | float, y: int | float, width: int | float, height: int | float) -> tuple[int, int, int, int]:
+    right = int(x) + int(width)
+    bottom = int(y) + int(height)
+    clamped_width, clamped_height = clamp_widget_size(window, width, height)
+    clamped_x = right - clamped_width if "w" in direction else int(x)
+    clamped_y = bottom - clamped_height if "n" in direction else int(y)
+    return int(clamped_x), int(clamped_y), int(clamped_width), int(clamped_height)
 
 
 def bind_drag_target(window, target) -> None:

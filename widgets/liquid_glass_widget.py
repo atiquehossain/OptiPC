@@ -3,7 +3,13 @@ from __future__ import annotations
 import customtkinter as ctk
 from config.constants import WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
 from widgets.native_window_effects import apply_native_window_effect, apply_rounded_window_region
-from widgets.window_interactions import bind_drag_target
+from widgets.window_interactions import (
+    bind_drag_target,
+    clamp_resize_geometry,
+    clamp_widget_position,
+    clamp_widget_size,
+    configure_size_limits,
+)
 
 
 class GlassWidgetCard(ctk.CTkFrame):
@@ -148,6 +154,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.widget_key = widget_key
         self.size_category = size_category
         self.theme_name = theme_name
+        configure_size_limits(self, size_category, int(width), int(height))
         
         if hasattr(parent, "get_widget_initial_geometry") and widget_key:
             geo = parent.get_widget_initial_geometry(widget_key, x=x, y=y, width=width, height=height)
@@ -155,8 +162,10 @@ class LiquidGlassWidget(ctk.CTkToplevel):
             y = int(geo["y"])
             width = int(geo["width"])
             height = int(geo["height"])
+        width, height = clamp_widget_size(self, width, height)
 
         super().__init__(parent)
+        x, y = clamp_widget_position(self, x, y, width, height)
 
         self._running = True
         self._geometry_save_after_id = None
@@ -472,15 +481,21 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         if not self.widget_key or not hasattr(self.master, "save_widget_geometry"):
             return
         try:
+            width, height = clamp_widget_size(self, self.winfo_width(), self.winfo_height())
             self.master.save_widget_geometry(
                 self.widget_key,
                 x=self.winfo_x(),
                 y=self.winfo_y(),
-                width=self.winfo_width(),
-                height=self.winfo_height(),
+                width=width,
+                height=height,
             )
         except Exception:
             pass
+
+    def _apply_constrained_geometry(self) -> None:
+        width, height = clamp_widget_size(self, self.winfo_width(), self.winfo_height())
+        if width != self.winfo_width() or height != self.winfo_height():
+            self.geometry(f"{width}x{height}+{self.winfo_x()}+{self.winfo_y()}")
 
     def start_drag(self, event) -> None:
         if self._is_resizing:
@@ -701,6 +716,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
                 new_x = self._resize_start_win_x + dx
             new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
 
+        new_x, new_y, new_w, new_h = clamp_resize_geometry(self, direction, new_x, new_y, new_w, new_h)
         self.geometry(f"{int(new_w)}x{int(new_h)}+{int(new_x)}+{int(new_y)}")
         
         # Stop event propagation during resize

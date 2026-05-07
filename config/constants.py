@@ -331,6 +331,16 @@ WIDGET_SIZES = {
     "default": {"width": 200, "height": 200},    # Default size for new widgets
 }
 
+# Widget resize limits. These keep desktop widgets usable without letting a
+# saved accidental drag turn them into oversized empty panels.
+WIDGET_SIZE_LIMITS = {
+    "small": {"min_width": 190, "min_height": 170, "max_width": 340, "max_height": 300},
+    "medium": {"min_width": 280, "min_height": 190, "max_width": 560, "max_height": 380},
+    "large": {"min_width": 340, "min_height": 200, "max_width": 720, "max_height": 380},
+    "extra_large": {"min_width": 340, "min_height": 340, "max_width": 720, "max_height": 680},
+    "default": {"min_width": 190, "min_height": 170, "max_width": 460, "max_height": 380},
+}
+
 DEFAULT_APP_SETTINGS = {
     "appearance_mode": "Dark",
     "widget_theme": "modern_dark",

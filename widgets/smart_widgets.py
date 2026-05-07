@@ -49,6 +49,10 @@ class SmartWidgetBase(BaseMiniWidget):
         self._expanded_geometry: str | None = None
         self._is_compact = False
         self._scheduled_after_ids: set[str] = set()
+        self.MIN_WIDTH = max(300, int(width * 0.82))
+        self.MIN_HEIGHT = max(210, int(height * 0.84))
+        self.MAX_WIDTH = max(width + 120, int(width * 1.45))
+        self.MAX_HEIGHT = max(height + 90, int(height * 1.35))
         super().__init__(parent, title, width=width, height=height, x=x, y=y, widget_key=widget_key)
         if theme_name:
             self.current_theme_name = theme_name
@@ -204,6 +208,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
         self.compact_button.configure(text="-")
         self.geometry(f"{self._default_width}x{self._default_height}+{self.winfo_x()}+{self.winfo_y()}")
+        self.after(0, self._apply_constrained_geometry)
 
     def toggle_compact(self) -> None:
         if self._is_compact:
@@ -231,6 +236,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self.compact_button.configure(text="-")
         if self._expanded_geometry:
             self.geometry(self._expanded_geometry)
+        self.after(0, self._apply_constrained_geometry)
 
     def set_compact_text(self, text: str) -> None:
         clean_text = " ".join(str(text).split())
