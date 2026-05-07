@@ -1,376 +1,247 @@
 # OptiPC
 
-[![Download OptiPC](https://img.shields.io/badge/Download-OptiPC-blue?style=for-the-badge)](builds/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://python.org)
+OptiPC is a Windows system optimization suite for cleanup, repair, recovery shortcuts, device tools, reporting, and live desktop widgets. It is built with Python and CustomTkinter, packaged as a portable Windows executable.
 
-**OptiPC is your all-in-one Windows toolkit that makes computer maintenance easy!** 
+The goal is simple: give normal Windows users one calm dashboard for the maintenance tasks they usually have to hunt for across Settings, Control Panel, Disk Cleanup, Task Manager, and command-line tools.
 
-Think of OptiPC as a friendly dashboard that puts all the important Windows tools in one place. Instead of searching through complicated Windows settings, you can clean up your computer, fix problems, and monitor performance with just a few clicks. It's perfect for both beginners who want to keep their PC running smoothly and advanced users who want quick access to system tools.
+## Screenshots
 
----
+### Dashboard
 
-## 🎯 **Quick Download - Ready to Run!**
+![OptiPC dashboard](assets/screenshots/dashboard.png)
 
-| Your System | 📦 Download | 📏 Size | 🔐 Admin Rights |
-|-------------|---------------|----------|---------------|
-| **Most PCs** (64-bit) | [OptiPC_x64_Release.zip](builds/OptiPC_x64_Release.zip) | ~20MB | ✅ Built-in |
-| **Older PCs** (32-bit) | [OptiPC_x86_Release.zip](builds/OptiPC_x86_Release.zip) | ~18MB | ✅ Built-in |
-| **ARM Devices** | [OptiPC_arm64_Release.zip](builds/OptiPC_arm64_Release.zip) | ~19MB | ✅ Built-in |
+### Cleanup Scanner
 
-**🚀 How to run:**
-1. Download the ZIP file that matches your system
-2. Extract all files to a folder  
-3. Double-click `OptiPC_[version].exe`
-4. **Click "Yes" on the UAC prompt** - all versions automatically request admin rights!
-5. **That's it!** No installation required!
+![OptiPC cleanup scanner](assets/screenshots/cleanup.png)
 
-**🔐 Administrator Rights:**
-- **All architectures** now include built-in administrator privileges
-- **No manual setup** needed - just click "Yes" when Windows asks
-- **Full functionality** guaranteed for system cleanup and repair tools
+### Desktop Widgets
 
----
+![OptiPC desktop widgets](assets/screenshots/widgets.png)
 
-![OptiPC Dashboard](assets/optipc_icon.png)
+### Settings
 
-##  What OptiPC Can Do For You
+![OptiPC settings](assets/screenshots/settings.png)
 
-### ** Main Dashboard - Your Command Center**
-The dashboard is like your PC's control panel. From here you can:
-- Launch useful tools with one click
-- See live updates about your computer's performance
-- Switch between different color themes to match your style
-- Open floating widgets that stay on your desktop
+## What OptiPC Does
 
-### ** System Cleanup - Keep Your PC Fast**
-Over time, computers collect junk files that slow them down. OptiPC helps you clean up safely:
-- **Quick Temp Cleanup**: Removes temporary files that programs leave behind (like browser cache and installation leftovers)
-- **Deep Cleanup**: Thorough cleaning that finds and removes more system junk
-- **Empty Recycle Bin**: Safely deletes files you've already thrown away
-- **Live Progress**: Watch the cleanup happen in real-time, so you know what's being cleaned
+OptiPC combines these PC maintenance areas in one app:
 
-### **🔧 System Repair - Fix Windows Problems**
-When Windows acts weird or crashes, OptiPC has the right tools:
-- **SFC (System File Checker)**: Finds and fixes damaged Windows files that can cause errors
-- **DISM**: Repairs the core Windows system itself (more powerful than SFC)
-- **CHKDSK**: Checks your hard drive for errors and fixes them to prevent data loss
+- Dashboard with system overview, quick actions, and widget launchers.
+- Cleanup scanner with size preview, category selection, and safe defaults.
+- Repair shortcuts for Windows health tools such as SFC, DISM, and CHKDSK.
+- Recovery page that opens Windows recovery utilities from a simpler interface.
+- Device and privacy shortcuts for audio, camera, location, Bluetooth, and Windows settings.
+- Wallpaper and appearance tools.
+- Reports for system, battery, storage, and PC health context.
+- Floating desktop widgets for live monitoring.
+- System tray mode with saved widget layout.
 
-### ** Data Recovery - Get Your Files Back**
-Accidentally deleted something important? OptiPC helps:
-- Uses Windows' built-in file recovery tools
-- Simple interface that guides you through the recovery process
-- No annoying popups - just clear status messages
+## Cleanup Features
 
-### ** Device Management - Control Your Hardware**
-Quickly access important device settings:
-- **Sound Settings**: Adjust volume and audio devices
-- **Camera Privacy**: Control which apps can use your camera
-- **Privacy Settings**: Manage app permissions and personal data
-- **Location Settings**: Control location tracking for apps
+The cleanup page is designed to scan before deleting. It estimates reclaimable storage, shows item counts, separates categories by safety level, and lets the user choose what to clean.
 
-### ** Personalization - Make It Yours**
-Customize how your computer looks and feels:
-- **Wallpaper Tools**: Change your desktop background easily
-- **Multiple Themes**: Choose from Dark, Light, or Liquid Glass themes
-- **Live Theme Switching**: Change themes instantly without restarting
+Safe categories selected by default:
 
-### ** System Reports - Know Your PC**
-Get detailed information about your computer's health:
-- **Battery Report**: See how much power you're using and battery condition
-- **Network Analysis**: Check your internet connection speed and status
-- **Installed Apps**: See all programs on your computer
-- **Heavy Processes**: Find apps that are using too much memory or CPU
-- **Storage Health**: Check how much space you have left on each drive
+- User temporary files
+- Browser caches for Chrome, Edge, and Firefox
+- Thumbnail and shader caches
+- Package manager caches for pip, npm, Yarn, pnpm, and NuGet
 
-### **Desktop Widgets - Live System Monitoring**
-These are small windows that stay on your desktop showing live information:
-- **CPU Monitor**: Shows how hard your processor is working (useful for gamers and professionals)
-- **RAM Monitor**: Displays memory usage (helps you know if you need more RAM)
-- **GPU Monitor**: Shows graphics card performance (great for gamers and video editors)
-- **Partitions**: View your disk drives and how they're organized
-- **Storage**: See how much space is left on each drive
-- **Network Speed**: Watch your internet download/upload speeds in real-time
-- **Calendar**: Interactive calendar with current date/time display and month navigation
-- **Clock**: Large digital clock with date and day display
-- **PC Uptime**: Shows how long your computer has been running since boot
+Review or advanced categories are opt-in:
 
-### ** Advanced Features**
-- **System Tray Mode**: Minimize OptiPC to the system tray so it runs in the background
-- **Smart Widgets**: Your widgets remember where you put them and how big they are
-- **Helpful Notifications**: Get friendly messages when actions complete (no annoying alerts)
-- **Resizable Widgets**: Make widgets bigger or smaller by dragging their edges
+- Windows temp files
+- Windows Update and Delivery Optimization cache
+- Crash reports and dump files
+- Recent items shortcuts
+- Installer leftovers
 
-## 🚀 Quick Start - Download & Run (No Installation Required!)
+Locked files and protected admin paths can be skipped safely. Cleanup reports removed items, skipped items, failures, and bytes freed.
 
-### **For Users Who Want to Run OptiPC Immediately**
+## Desktop Widgets
 
-If you just want to use OptiPC without installing Python or dealing with command lines:
+Widgets are built around standard size classes and shared theme tokens so they stay consistent across displays:
 
-#### **Step 1: Choose Your Version**
-| Your Computer | Download This File |
-|---------------|-------------------|
-| Most modern PCs (64-bit) | [OptiPC_x64_Release.zip](builds/OptiPC_x64_Release.zip) |
-| Older PCs (32-bit) | [OptiPC_x86_Release.zip](builds/OptiPC_x86_Release.zip) |
-| ARM devices (Surface Pro X) | [OptiPC_arm64_Release.zip](builds/OptiPC_arm64_Release.zip) |
+| Size class | Default size |
+| --- | --- |
+| Small | 170 x 170 |
+| Medium | 364 x 170 |
+| Large | 364 x 376 |
+| Extra large | 745 x 376 |
 
-*Not sure? 99% of computers use the **64-bit version**.*
+Available widgets include:
 
-#### **Step 2: Download & Extract**
-1. Click the appropriate download link above
-2. Save the ZIP file to your Desktop or Downloads folder  
-3. Right-click the ZIP file → "Extract All..." or "Extract here"
-4. Open the extracted folder
+- CPU usage
+- Memory usage
+- GPU status
+- Storage and partitions
+- Calendar
+- Digital clock
+- Analog clock
+- World clock
+- Uptime
+- Internet speed
+- PC health score
+- Top processes
+- Battery health
+- Storage cleanup
+- Disk I/O
+- Network quality
+- Bluetooth battery/status rings
+- Windows Update status
+- Temperature, when hardware sensors expose data
+- Quick actions
+- Performance timeline
 
-#### **Step 3: Run OptiPC**
-1. Double-click `OptiPC_[your_version].exe`
-2. **Administrator Required:** Windows will ask for permission - click "Yes"
-3. **That's it!** No installation needed - fully portable!
+Widget behavior:
 
-#### **Why Administrator Access is Required:**
-OptiPC needs admin rights to:
-- Clean system files and temporary data
-- Run system repair tools (SFC, DISM, CHKDSK)
-- Access hardware information for monitoring
-- Modify system settings for optimization
+- Drag to reposition.
+- Resize from the edges and corners.
+- Double-click to switch between compact and expanded layout where supported.
+- Right-click for widget actions.
+- Press and hold to enter edit mode with Apple-style remove controls.
+- Hidden widgets pause expensive polling to reduce CPU usage.
+- Positions, sizes, visibility, theme, and widget color mode are saved.
 
-#### **What's Included in Each Download?**
-```
-OptiPC_[version]_Release/
-├── OptiPC_[version].exe     # The main program (run this!)
-├── README.md                 # Full documentation  
-├── README_FRIEND.md           # Quick start guide
-├── TROUBLESHOOTING_FRIEND.md # Help if something goes wrong
-└── INSTALL.txt              # Installation instructions
-```
+World Clock can be configured from the widget context menu. Use a preset or choose cities manually; the widget stores city/time-zone selections through the widget state service.
 
-#### **First Time Setup**
-- **Widgets**: Click Dashboard → CPU/RAM/GPU buttons to open desktop widgets
-- **Themes**: Go to Settings → Choose Dark/Light/Liquid Glass themes  
-- **System Tray**: Close main window to minimize to system tray
-- **Resize Widgets**: Drag edges of any widget to make it bigger/smaller
+Bluetooth rings are status slots. When no supported battery-reporting Bluetooth device is connected, rings remain empty instead of inventing fake battery levels.
 
-#### **Security Note**
-- **UAC Prompt:** Windows will show User Account Control prompt - this is normal and safe
-- Click "Yes" when asked "Do you want to allow this app to make changes to your device?"
-- OptiPC is 100% safe and open source
-- The admin access is needed for system cleanup and repair functions
+## Appearance
 
----
+The main app supports dark and light modes. Widgets support:
 
-## How to Install OptiPC (Developer Version)
+- Dark
+- Light
+- Liquid Glass
+- Modern Dark
+- Modern Light
+- Automatic color mode
+- Full color
+- Monochrome
+- Tinted mode
 
-### What You Need First
-- **Windows 10 or Windows 11** (most modern computers have this)
-- **Python 3.8 or newer** (don't worry if you're not sure - we'll help you check)
+The app uses shared widget color, typography, and sizing configuration so CPU, RAM, clocks, Bluetooth, calendar, and health widgets follow the same design language.
 
-### Step-by-Step Installation
+## Download And Run
 
-**Step 1: Get the OptiPC files**
-- Download the OptiPC folder from GitHub
-- Save it somewhere you can find it easily (like your Desktop or Downloads folder)
+The current ready-to-run build is the x64 Windows release:
 
-**Step 2: Open Command Prompt**
-- Press the Windows key
-- Type "cmd" and press Enter
-- A black window will open - this is Command Prompt
+- [OptiPC_x64_Release.zip](builds/OptiPC_x64_Release.zip)
 
-**Step 3: Navigate to OptiPC folder**
-- In the black window, type: `cd Desktop\OptiPC` (if you saved it to Desktop)
-- Or `cd Downloads\OptiPC` (if you saved it to Downloads)
-- Press Enter
+Run it like this:
 
-**Step 4: Create a virtual environment**
-This keeps OptiPC separate from other programs on your computer:
-```
+1. Download or open the release ZIP.
+2. Extract the ZIP.
+3. Double-click `OptiPC_x64.exe`.
+4. Approve Windows security prompts only when you trust the local build.
+
+The app is portable. It does not require a full installer. Some repair and cleanup actions may ask for administrator permission because Windows protects system folders and repair tools.
+
+x86 and ARM64 spec files exist, but those builds should be produced and tested on real x86 or ARM64 Windows devices before release.
+
+## Run From Source
+
+Requirements:
+
+- Windows 10 or Windows 11
+- Python 3.10 or newer recommended
+- PowerShell for Windows system commands
+
+```powershell
 python -m venv .venv
-```
-- Press Enter
-- Wait for it to finish (you'll see a new folder called ".venv")
-
-**Step 5: Activate the virtual environment**
-```
-.venv\Scripts\activate
-```
-- Press Enter
-- You should see `(.venv)` at the beginning of your line
-
-**Step 6: Install the needed programs**
-```
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
-- Press Enter
-- This downloads all the tools OptiPC needs to work
-- Wait for it to finish (might take a few minutes)
-
-**Step 7: Start OptiPC!**
-```
 python main.py
 ```
-- Press Enter
-- The OptiPC window should open!
 
-##  How to Use OptiPC
+Dependencies are intentionally small:
 
-### **Getting Started - First Time**
-When you first open OptiPC, you'll see:
-- **Left sidebar**: Different pages you can visit (Dashboard, Cleanup, Repair, etc.)
-- **Main area**: The tools for that page
-- **Top bar**: Settings and theme options
+- `customtkinter`
+- `psutil`
+- `GPUtil`
+- `pystray`
+- `Pillow`
 
-**Try this first:**
-1. Click on **Dashboard** (it's probably already selected)
-2. Click the **CPU** button to open your first widget
-3. Drag the widget around your desktop - it stays on top!
-4. Try the **RAM** and **Network Speed** widgets too
+## Build
 
-### **System Tray Mode - Keep OptiPC Running**
-Want OptiPC to stay open even when you close the main window?
-- If you have the extra packages installed, closing OptiPC will minimize it to the system tray (the area near the clock)
-- Right-click the tray icon to:
-  - Open OptiPC again
-  - Show or hide all your widgets
-  - Completely exit the program
+Build the x64 executable:
 
-### **Managing Your Widgets**
-Your widgets are smart - they remember:
-- **Where you put them** on your desktop
-- **How big** you made them
-- **Whether they were visible or hidden**
-
-**To resize widgets:**
-- Move your mouse to the edges or corners
-- When the cursor changes, click and drag
-
-**To change themes:**
-- Go to the Settings page
-- Choose Dark, Light, or Liquid Glass
-- All your widgets update instantly!
-
-##  How OptiPC Works (Simple Explanation)
-
-### **The Main Parts**
+```powershell
+python build_multi_arch.py --arch x64
 ```
+
+Build all supported targets where the host machine can produce them:
+
+```powershell
+python build_multi_arch.py --all
+```
+
+The generated executable is written to `dist/`. Release ZIPs are written to `builds/`.
+
+## Test
+
+Useful local checks:
+
+```powershell
+python test_responsive_design.py
+python test_resize_fix.py
+python test_resize_conflict_fix.py
+python test_double_click.py
+python test_close_button_double_click.py
+python test_calendar.py
+python test_new_widgets.py
+```
+
+For release QA, click through the built executable:
+
+- Open app
+- Open each page from the sidebar
+- Run cleanup scan without deleting
+- Test safe cleanup on disposable junk only
+- Open, drag, resize, close, and restore widgets
+- Switch widget themes and color modes
+- Minimize to tray and restore
+- Export or view reports
+
+## Resource Use
+
+Recent local x64 build size:
+
+- `dist/OptiPC_x64.exe`: about 32.6 MB
+- `builds/OptiPC_x64_Release.zip`: about 32.3 MB
+
+Runtime usage depends on how many widgets are visible. The app is optimized to stay quiet when idle by:
+
+- Throttling expensive hardware probes
+- Sampling CPU instead of polling aggressively
+- Pausing hidden widgets
+- Caching slow status checks
+- Avoiding fake Bluetooth battery scans when no supported device is connected
+
+## Project Structure
+
+```text
 OptiPC/
-├── main.py                 # The start button - opens the whole program
-├── services/               # The "engine room" - does all the hard work
-│   ├── cleanup_service.py  # Handles cleaning up your computer
-│   └── ...                 # Other service files for different tasks
-├── widgets/                # The floating windows you see on desktop
-│   ├── base_mini_widget.py # The basic blueprint for all widgets
-│   └── ...                 # Individual widget files
-├── assets/                 # Pictures and icons
-├── requirements.txt        # Shopping list of programs OptiPC needs
-└── README.md              # This file you're reading!
+  app.py                     Main application shell
+  main.py                    Source entry point
+  pages/                     Dashboard, cleanup, repair, recovery, settings, reports
+  services/                  Cleanup, system, tray, settings, reports, widget state
+  widgets/                   Floating desktop widgets and shared widget bases
+  config/                    App constants, themes, widget specs, style tokens
+  assets/                    App icon and README screenshots
+  builds/                    Release ZIP output
+  dist/                      Built executable output
 ```
 
-### **How It All Works Together**
-- **Services Layer**: Like workers that do specific jobs (cleaning, repairing, etc.)
-- **Widget System**: Creates those floating windows that show live information
-- **Settings Manager**: Remembers your preferences and widget positions
-- **Theme Engine**: Changes colors and styles without restarting
+## Safety And Privacy
 
-##  Personalizing OptiPC
+OptiPC is a local Windows utility. It does not require an account and does not send PC data to a cloud service. Cleanup is category based and conservative by default, but any system cleanup tool can remove files the user may still want, so scan results should be reviewed before deleting.
 
-### **Choose Your Look**
-OptiPC comes with three beautiful themes:
-- **Dark Theme**: Easy on the eyes, great for nighttime use
-- **Light Theme**: Clean and bright, good for daytime
-- **Liquid Glass**: Modern and stylish with glass-like effects
+OptiPC is not a replacement for antivirus software, backups, or professional data recovery tools.
 
-**How to change themes:**
-1. Click the **Settings** page
-2. Choose your preferred theme
-3. All open widgets change instantly!
+## Current Limits
 
-### **Where Your Settings Are Saved**
-- **Widget Positions**: `%USERPROFILE%\OptiPCConfig\widget_state.json`
-  - This is a special folder in your User folder
-  - Don't delete this file unless you want to reset widget positions
-- **App Settings**: Saved in Windows registry (automatic)
-
-##  Troubleshooting - Common Problems
-
-### **"GPU shows N/A"**
-- This is normal! GPU monitoring depends on your graphics card driver
-- Some graphics cards don't report usage information
-- Don't worry - everything else still works perfectly
-
-### **"Widgets don't open or show errors"**
-- This was fixed in the latest version
-- Make sure you installed all requirements with `pip install -r requirements.txt`
-- Try restarting OptiPC
-
-### **"System tray icon doesn't appear"**
-- You need two extra packages for tray mode: `pystray` and `Pillow`
-- Install them with: `pip install pystray Pillow`
-- Restart OptiPC and try again
-
-### **"Python command not found"**
-- Python might not be installed or not added to your PATH
-- Download Python from python.org and check "Add to PATH" during installation
-- Or restart your computer after installing Python
-
-##  What's Coming Next
-
-### **Future Updates We're Working On**
-- **Advanced Storage Page**: See all your drives with detailed information cards
-- **More Monitoring Tools**: Additional system performance metrics
-- **Automatic Maintenance**: Schedule cleanups and repairs automatically
-- **Microsoft Store**: Easy installation from Windows Store
-
-### **Want to Help?**
-We love suggestions and improvements!
-- Found a bug? Tell us about it
-- Have an idea for a new feature? We'd love to hear it
-- Good at programming? We welcome contributions!
-
-##  Legal Stuff
-
-This project is open source and free to use. It's licensed under the MIT License, which means:
-- You can use it for personal or commercial projects
-- You can modify it to fit your needs
-- You just need to keep the original copyright notice
-
-## 👨‍💻 **About the Developer**
-
-**Atique Hossain** - Windows System Optimization Expert
-
-🔗 **Connect with me:**
-- **LinkedIn:** [linkedin.com/in/atique-hossain](https://www.linkedin.com/in/atique-hossain/)
-- **GitHub:** [github.com/atiquehossain](https://github.com/atiquehossain)
-- **Website:** [atiquehossain.github.io](https://atiquehossain.github.io/)
-- **Instagram:** [@imatiquehossain](https://www.instagram.com/imatiquehossain/)
-- **IT Services:** [nexgenscript.com](https://nexgenscript.com/)
-
-💼 **About Me:**
-I'm a passionate Windows system optimization specialist with expertise in creating user-friendly tools that make computer maintenance accessible to everyone. OptiPC is my flagship project designed to help users keep their Windows systems running smoothly with professional-grade tools wrapped in an intuitive interface.
-
-🎯 **My Mission:**
-- Democratize Windows system maintenance
-- Create powerful yet simple-to-use tools
-- Provide free, open-source solutions
-- Help users optimize their PC performance
-
----
-
-##  Thank You To
-
-- **CustomTkinter**: For the beautiful modern interface framework
-- **Python Community**: For all the amazing libraries that make system monitoring possible
-- **Windows Documentation**: For helping us understand Windows internals
-- **Beta Testers**: For finding bugs and suggesting improvements
-
----
-
-##  You're Ready to Go!
-
-**OptiPC is your friendly Windows assistant - keeping your computer clean, fast, and running smoothly.**
-
-Whether you're a complete beginner who just wants to keep their PC in good shape, or an advanced user who wants quick access to powerful tools, OptiPC has something for everyone.
-
-**Happy computing! **
-
----
-
-*Still have questions? Feel free to ask in our GitHub discussions or check out our troubleshooting section above.*
+- Real acrylic or CSS-style blur is limited by the CustomTkinter/Tk stack.
+- Temperature and battery wear can show unavailable when hardware or drivers do not expose sensor data.
+- Pending Windows Update detection is limited compared with the full Windows Update Settings app.
+- x86 and ARM64 builds need native-device QA before being advertised as ready releases.
