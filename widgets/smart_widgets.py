@@ -20,6 +20,21 @@ try:
 except Exception:
     GPUtil = None
 
+
+def run_hidden_subprocess(command: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """Run background probes without flashing a terminal window."""
+
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        kwargs.setdefault("creationflags", subprocess.CREATE_NO_WINDOW)
+        try:
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            kwargs.setdefault("startupinfo", startupinfo)
+        except Exception:
+            pass
+    return subprocess.run(command, **kwargs)
+
+
 from config.widget_specs import widget_default_size, widget_spec
 from config.widget_style import widget_text_role
 from services.cleanup_service import CleanupService
@@ -676,7 +691,7 @@ if ($full -and $design -and [double]$design -gt 0) {
 }
 """
         try:
-            result = subprocess.run(
+            result = run_hidden_subprocess(
                 ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
                 capture_output=True,
                 text=True,
@@ -698,7 +713,7 @@ if ($full -and $design -and [double]$design -gt 0) {
     def _read_battery_wear_from_powercfg() -> str | None:
         report_path = Path(tempfile.gettempdir()) / "optipc_battery_report.xml"
         try:
-            result = subprocess.run(
+            result = run_hidden_subprocess(
                 ["powercfg", "/batteryreport", "/xml", "/output", str(report_path)],
                 capture_output=True,
                 text=True,
@@ -877,7 +892,12 @@ class NetworkQualityWidget(SmartWidgetBase):
 
         def worker() -> None:
             try:
-                result = subprocess.run(["ping", "-n", "1", "-w", "1200", "1.1.1.1"], capture_output=True, text=True, timeout=4)
+                result = run_hidden_subprocess(
+                    ["ping", "-n", "1", "-w", "1200", "1.1.1.1"],
+                    capture_output=True,
+                    text=True,
+                    timeout=4,
+                )
                 text = result.stdout or result.stderr
                 label = "Ping: failed"
                 for token in ("Average =", "time="):
@@ -1007,7 +1027,7 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
 } | ConvertTo-Json -Compress -Depth 4
 """
         try:
-            result = subprocess.run(
+            result = run_hidden_subprocess(
                 ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
                 capture_output=True,
                 text=True,
@@ -1233,7 +1253,7 @@ try {
 } | ConvertTo-Json -Compress
 """
             try:
-                result = subprocess.run(
+                result = run_hidden_subprocess(
                     ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
                     capture_output=True,
                     text=True,
@@ -1344,7 +1364,7 @@ class TemperatureWidget(SmartWidgetBase):
     @staticmethod
     def _nvidia_smi_temperatures() -> list[tuple[str, float]]:
         try:
-            result = subprocess.run(
+            result = run_hidden_subprocess(
                 ["nvidia-smi", "--query-gpu=name,temperature.gpu", "--format=csv,noheader,nounits"],
                 capture_output=True,
                 text=True,
@@ -1373,7 +1393,7 @@ ForEach-Object {
 } | ConvertTo-Json -Compress
 """
         try:
-            result = subprocess.run(
+            result = run_hidden_subprocess(
                 ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
                 capture_output=True,
                 text=True,

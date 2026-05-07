@@ -218,6 +218,31 @@ def test_bluetooth_widget_connection_summary():
         return False
 
 
+def test_widget_subprocesses_run_hidden():
+    """Test widget background probes use the hidden subprocess wrapper."""
+    try:
+        import inspect
+
+        import widgets.smart_widgets as smart_widgets
+
+        source = inspect.getsource(smart_widgets)
+        if "def run_hidden_subprocess" not in source:
+            print("FAIL: Missing hidden subprocess wrapper")
+            return False
+        if source.count("subprocess.run(") != 1:
+            print("FAIL: Widget probes call subprocess.run directly")
+            return False
+        if source.count("run_hidden_subprocess(") < 8:
+            print("FAIL: Widget background probes are not routed through the hidden runner")
+            return False
+
+        print("OK: Widget background subprocesses run hidden")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Hidden subprocess test error: {exc}")
+        return False
+
+
 def test_responsive_fonts():
     """Test responsive font scaling."""
     try:
@@ -701,6 +726,7 @@ def main():
         ("Widget Text Role Tests", test_widget_text_roles),
         ("CPU Usage Helper Tests", test_cpu_usage_helpers),
         ("Bluetooth Connection Tests", test_bluetooth_widget_connection_summary),
+        ("Hidden Subprocess Tests", test_widget_subprocesses_run_hidden),
         ("Responsive Font Tests", test_responsive_fonts),
         ("Widget Size Limit Tests", test_widget_size_limits),
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),
