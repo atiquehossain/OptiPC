@@ -77,8 +77,12 @@ def apply_cursor(window, target, direction: str | None) -> None:
 
 
 def geometry_root_point(window, event) -> tuple[int, int]:
+    return int(event.x_root), int(event.y_root)
+
+
+def logical_size_delta(window, dx: int | float, dy: int | float) -> tuple[int, int]:
     scale = _window_scaling(window)
-    return int(round(int(event.x_root) / scale)), int(round(int(event.y_root) / scale))
+    return int(round(float(dx) / scale)), int(round(float(dy) / scale))
 
 
 def widget_point(window, event) -> tuple[int, int]:
@@ -176,18 +180,18 @@ def get_virtual_screen_bounds(window=None) -> tuple[int, int, int, int] | None:
         virtual_width = int(user32.GetSystemMetrics(78))
         virtual_height = int(user32.GetSystemMetrics(79))
         if virtual_width > 0 and virtual_height > 0:
-            scale = _window_scaling(window)
-            return (
-                int(round(virtual_x / scale)),
-                int(round(virtual_y / scale)),
-                int(round(virtual_width / scale)),
-                int(round(virtual_height / scale)),
-            )
+            return virtual_x, virtual_y, virtual_width, virtual_height
     except Exception:
         pass
     if window is not None:
         try:
-            return 0, 0, int(window.winfo_screenwidth()), int(window.winfo_screenheight())
+            scale = _window_scaling(window)
+            return (
+                0,
+                0,
+                int(round(window.winfo_screenwidth() * scale)),
+                int(round(window.winfo_screenheight() * scale)),
+            )
         except Exception:
             pass
     return None
@@ -205,8 +209,9 @@ def clamp_widget_position(window, x: int | float, y: int | float, width: int | f
     bounds = get_virtual_screen_bounds(window)
     if bounds is not None:
         virtual_x, virtual_y, virtual_width, virtual_height = bounds
-        max_x = virtual_x + virtual_width - int(width)
-        max_y = virtual_y + virtual_height - int(height)
+        effective_width, effective_height = effective_window_size(window, width, height)
+        max_x = virtual_x + virtual_width - effective_width
+        max_y = virtual_y + virtual_height - effective_height
         return max(virtual_x, min(x, max_x)), max(virtual_y, min(y, max_y))
     return x, y
 
@@ -297,11 +302,13 @@ def find_non_overlapping_position(
 
 
 def clamp_resize_geometry(window, direction: str, x: int | float, y: int | float, width: int | float, height: int | float) -> tuple[int, int, int, int]:
-    right = int(x) + int(width)
-    bottom = int(y) + int(height)
+    proposed_width, proposed_height = effective_window_size(window, width, height)
+    right = int(x) + proposed_width
+    bottom = int(y) + proposed_height
     clamped_width, clamped_height = clamp_widget_size(window, width, height)
-    clamped_x = right - clamped_width if "w" in direction else int(x)
-    clamped_y = bottom - clamped_height if "n" in direction else int(y)
+    clamped_effective_width, clamped_effective_height = effective_window_size(window, clamped_width, clamped_height)
+    clamped_x = right - clamped_effective_width if "w" in direction else int(x)
+    clamped_y = bottom - clamped_effective_height if "n" in direction else int(y)
     return int(clamped_x), int(clamped_y), int(clamped_width), int(clamped_height)
 
 

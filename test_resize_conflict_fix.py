@@ -118,8 +118,8 @@ def test_shared_resize_uses_logical_geometry():
 
 
 def test_scaled_pointer_coordinates_use_geometry_units():
-    """High-DPI pointer deltas should not inflate widget geometry."""
-    from widgets.window_interactions import geometry_root_point, start_resize, widget_point
+    """High-DPI resize uses raw positions and scaled size deltas."""
+    from widgets.window_interactions import geometry_root_point, logical_size_delta, start_resize, widget_point
 
     class FakeWindow:
         def geometry(self):
@@ -134,21 +134,26 @@ def test_scaled_pointer_coordinates_use_geometry_units():
 
     window = FakeWindow()
     root_x, root_y = geometry_root_point(window, FakeEvent())
-    if (root_x, root_y) != (200, 240):
-        print(f"FAIL: Scaled root point was {(root_x, root_y)}")
+    if (root_x, root_y) != (300, 360):
+        print(f"FAIL: Root point should stay in screen pixels, got {(root_x, root_y)}")
         return False
 
     point_x, point_y = widget_point(window, FakeEvent())
-    if (point_x, point_y) != (160, 190):
-        print(f"FAIL: Scaled widget point was {(point_x, point_y)}")
+    if (point_x, point_y) != (260, 310):
+        print(f"FAIL: Widget hit point should stay in screen pixels, got {(point_x, point_y)}")
+        return False
+
+    delta_x, delta_y = logical_size_delta(window, 150, 120)
+    if (delta_x, delta_y) != (100, 80):
+        print(f"FAIL: Size delta was not converted to logical units: {(delta_x, delta_y)}")
         return False
 
     start_resize(window, FakeEvent(), "se")
-    if window._resize_start_x != 200 or window._resize_start_y != 240:
-        print("FAIL: Resize start kept raw screen coordinates")
+    if window._resize_start_x != 300 or window._resize_start_y != 360:
+        print("FAIL: Resize start did not keep raw screen coordinates")
         return False
 
-    print("OK: Scaled pointer coordinates use geometry units")
+    print("OK: Scaled pointer coordinates separate position and size units")
     return True
 
 
@@ -190,11 +195,30 @@ def test_drag_target_binding_is_idempotent():
     return True
 
 
+def test_resize_release_saves_geometry():
+    """Resize release must persist the final geometry after configure events were skipped."""
+    import inspect
+
+    from widgets.base_mini_widget import BaseMiniWidget
+    from widgets.liquid_glass_widget import LiquidGlassWidget
+    from widgets.modern_widget_base import ModernMiniWidget
+
+    for cls in (BaseMiniWidget, ModernMiniWidget, LiquidGlassWidget):
+        source = inspect.getsource(cls.on_mouse_up)
+        if "_save_geometry_now" not in source:
+            print(f"FAIL: {cls.__name__}.on_mouse_up does not save resized geometry")
+            return False
+
+    print("OK: Resize release saves final geometry")
+    return True
+
+
 if __name__ == "__main__":
     success = (
         test_resize_conflict_fix()
         and test_shared_resize_uses_logical_geometry()
         and test_scaled_pointer_coordinates_use_geometry_units()
         and test_drag_target_binding_is_idempotent()
+        and test_resize_release_saves_geometry()
     )
     sys.exit(0 if success else 1)

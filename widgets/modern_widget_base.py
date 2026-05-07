@@ -23,6 +23,7 @@ from widgets.window_interactions import (
     configure_size_limits,
     current_widget_geometry,
     geometry_root_point,
+    logical_size_delta,
     widget_point,
 )
 
@@ -616,6 +617,7 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         root_x, root_y = geometry_root_point(self, event)
         dx = root_x - self._resize_start_x
         dy = root_y - self._resize_start_y
+        width_delta, height_delta = logical_size_delta(self, dx, dy)
 
         new_x = self._resize_start_win_x
         new_y = self._resize_start_win_y
@@ -626,30 +628,30 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
 
         # Handle each direction separately to prevent auto-incrementing
         if direction == "e":  # East - resize right edge only
-            new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
+            new_w = max(self.MIN_WIDTH, self._resize_start_w + width_delta)
             
         elif direction == "w":  # West - resize left edge only
-            proposed_w = self._resize_start_w - dx
+            proposed_w = self._resize_start_w - width_delta
             if proposed_w >= self.MIN_WIDTH:
                 new_w = proposed_w
                 new_x = self._resize_start_win_x + dx
                 
         elif direction == "s":  # South - resize bottom edge only
-            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + height_delta)
             
         elif direction == "n":  # North - resize top edge only
-            proposed_h = self._resize_start_h - dy
+            proposed_h = self._resize_start_h - height_delta
             if proposed_h >= self.MIN_HEIGHT:
                 new_h = proposed_h
                 new_y = self._resize_start_win_y + dy
                 
         elif direction == "ne":  # Northeast - resize right and bottom
-            new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
-            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            new_w = max(self.MIN_WIDTH, self._resize_start_w + width_delta)
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + height_delta)
             
         elif direction == "nw":  # Northwest - resize left and top
-            proposed_w = self._resize_start_w - dx
-            proposed_h = self._resize_start_h - dy
+            proposed_w = self._resize_start_w - width_delta
+            proposed_h = self._resize_start_h - height_delta
             if proposed_w >= self.MIN_WIDTH:
                 new_w = proposed_w
                 new_x = self._resize_start_win_x + dx
@@ -658,15 +660,15 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
                 new_y = self._resize_start_win_y + dy
                 
         elif direction == "se":  # Southeast - resize right and bottom
-            new_w = max(self.MIN_WIDTH, self._resize_start_w + dx)
-            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            new_w = max(self.MIN_WIDTH, self._resize_start_w + width_delta)
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + height_delta)
             
         elif direction == "sw":  # Southwest - resize left and bottom
-            proposed_w = self._resize_start_w - dx
+            proposed_w = self._resize_start_w - width_delta
             if proposed_w >= self.MIN_WIDTH:
                 new_w = proposed_w
                 new_x = self._resize_start_win_x + dx
-            new_h = max(self.MIN_HEIGHT, self._resize_start_h + dy)
+            new_h = max(self.MIN_HEIGHT, self._resize_start_h + height_delta)
 
         new_x, new_y, new_w, new_h = clamp_resize_geometry(self, direction, new_x, new_y, new_w, new_h)
         self.geometry(f"{int(new_w)}x{int(new_h)}+{int(new_x)}+{int(new_y)}")
@@ -678,6 +680,7 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         self._is_resizing = False
         self._resize_dir = None
         self._settle_widget_position()
+        self._save_geometry_now()
         
         # Stop event propagation to prevent conflicts
         return "break"

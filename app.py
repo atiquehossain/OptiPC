@@ -54,6 +54,7 @@ from widgets.smart_widgets import (
 from widgets.toast import ToastManager
 from widgets.window_interactions import (
     current_widget_geometry,
+    effective_window_size,
     find_non_overlapping_position,
     get_virtual_screen_bounds,
 )
@@ -294,8 +295,7 @@ class OptiPCApp(ctk.CTk):
                 rect = (
                     int(state["x"]),
                     int(state["y"]),
-                    max(1, int(state["width"])),
-                    max(1, int(state["height"])),
+                    *self._effective_widget_size(max(1, int(state["width"])), max(1, int(state["height"]))),
                 )
             except Exception:
                 continue
@@ -307,7 +307,11 @@ class OptiPCApp(ctk.CTk):
     @staticmethod
     def _widget_window_rect(widget) -> tuple[int, int, int, int]:
         x, y, width, height = current_widget_geometry(widget)
-        return x, y, width, height
+        effective_width, effective_height = effective_window_size(widget, width, height)
+        return x, y, effective_width, effective_height
+
+    def _effective_widget_size(self, width: int, height: int) -> tuple[int, int]:
+        return effective_window_size(self, width, height)
 
     def _non_overlapping_widget_position(
         self,
@@ -320,11 +324,12 @@ class OptiPCApp(ctk.CTk):
         obstacles = self._visible_widget_rects(exclude_key=key)
         if not obstacles:
             return int(x), int(y)
+        effective_width, effective_height = self._effective_widget_size(int(width), int(height))
         return find_non_overlapping_position(
             int(x),
             int(y),
-            int(width),
-            int(height),
+            effective_width,
+            effective_height,
             obstacles,
             gap=18,
             margin=12,

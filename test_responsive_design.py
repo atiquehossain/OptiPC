@@ -217,11 +217,11 @@ def test_scaled_screen_edge_uses_logical_size():
                 return 1.5
 
         original_bounds = window_interactions.get_virtual_screen_bounds
-        window_interactions.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1280, 720)
+        window_interactions.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1920, 1200)
         try:
             x, y = window_interactions.clamp_widget_position(
                 FakeWindow(),
-                980,
+                1480,
                 80,
                 280,
                 210,
@@ -229,7 +229,7 @@ def test_scaled_screen_edge_uses_logical_size():
         finally:
             window_interactions.get_virtual_screen_bounds = original_bounds
 
-        if x != 980 or y != 80:
+        if x != 1480 or y != 80:
             print(f"FAIL: Right-edge logical placement was clamped to {(x, y)}")
             return False
 
@@ -246,24 +246,30 @@ def test_app_overlap_placement_keeps_right_column():
         import app as app_module
 
         class FakeApp:
+            def _get_window_scaling(self):
+                return 1.5
+
+            def _effective_widget_size(self, width, height):
+                return app_module.effective_window_size(self, width, height)
+
             def _visible_widget_rects(self, exclude_key=None):
-                return [(980, 80, 280, 210)]
+                return [(1480, 80, 420, 315)]
 
         original_bounds = app_module.get_virtual_screen_bounds
-        app_module.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1280, 720)
+        app_module.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1920, 1200)
         try:
             x, y = app_module.OptiPCApp._non_overlapping_widget_position(
                 FakeApp(),
                 "ram",
-                980,
-                320,
+                1480,
+                420,
                 280,
                 210,
             )
         finally:
             app_module.get_virtual_screen_bounds = original_bounds
 
-        if (x, y) != (980, 320):
+        if (x, y) != (1480, 420):
             print(f"FAIL: Free right-column widget was moved to {(x, y)}")
             return False
 
