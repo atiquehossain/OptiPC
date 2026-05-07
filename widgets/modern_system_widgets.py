@@ -5,14 +5,20 @@ from typing import List
 import customtkinter as ctk
 
 from widgets.calendar_responsive import (
-    apply_calendar_footer_visibility,
     apply_calendar_grid_layout,
     CALENDAR_TODAY_COLOR,
-    CALENDAR_TODAY_HOVER,
+    CALENDAR_BORDER,
+    CALENDAR_MUTED_TEXT,
+    CALENDAR_SURFACE,
+    CALENDAR_TEXT,
+    CALENDAR_WEEKDAY_TEXT,
     CALENDAR_WEEKDAY_LABELS,
+    calendar_canvas_date_at_point,
     calendar_day_font,
     calendar_month_dates,
+    install_calendar_canvas,
     install_calendar_grid,
+    redraw_calendar_canvas,
 )
 from widgets.modern_widget_base import ModernMiniWidget
 from config.constants import FONT_SIZES
@@ -600,16 +606,26 @@ class ModernCalendarWidget(ModernMiniWidget):
         for week in range(6):
             week_buttons = []
             for day in range(7):
-                btn = self.create_apple_button(
+                btn = ctk.CTkLabel(
                     self.calendar_frame,
-                    "",
-                    command=lambda w=week, d=day: self.day_clicked(w, d),
+                    text="",
                     width=1,
-                    height=1
+                    height=1,
+                    corner_radius=8,
+                    fg_color="transparent",
+                    font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="bold"),
+                    text_color=CALENDAR_TEXT,
                 )
+                self._bind_drag_target(btn)
+                btn.bind("<ButtonRelease-1>", lambda _event, w=week, d=day: self.day_clicked(w, d), add="+")
                 btn.grid(row=week + 1, column=day, padx=0, pady=0, sticky="nsew")
                 week_buttons.append(btn)
             self.day_buttons.append(week_buttons)
+        self.calendar_canvas = install_calendar_canvas(
+            self,
+            self.calendar_frame,
+            self._on_calendar_canvas_release,
+        )
         
         # Current date/time display
         self.datetime_label = self.create_apple_label(
@@ -640,12 +656,24 @@ class ModernCalendarWidget(ModernMiniWidget):
         except Exception:
             pass
         apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
+        if hasattr(self, "calendar_canvas"):
+            try:
+                self.calendar_canvas.grid(row=0, column=0, rowspan=7, columnspan=7, padx=0, pady=0, sticky="nsew")
+                self.calendar_canvas.lift()
+            except Exception:
+                pass
+            redraw_calendar_canvas(self, self.calendar_canvas)
 
     def refresh_theme(self) -> None:
+        try:
+            self.container.configure(fg_color=CALENDAR_SURFACE, border_color=CALENDAR_BORDER)
+            self.attributes("-alpha", 0.98)
+        except Exception:
+            pass
         if hasattr(self, 'month_label'):
-            self.month_label.configure(text_color=self.theme["text"])
+            self.month_label.configure(text_color=CALENDAR_TEXT)
         if hasattr(self, 'datetime_label'):
-            self.datetime_label.configure(text_color=self.theme["muted"])
+            self.datetime_label.configure(text_color=CALENDAR_MUTED_TEXT)
         if hasattr(self, 'prev_btn'):
             self.prev_btn.configure(
                 fg_color=self.theme["button"],
@@ -668,15 +696,17 @@ class ModernCalendarWidget(ModernMiniWidget):
         # Update day labels
         if hasattr(self, 'day_labels'):
             for label in self.day_labels:
-                label.configure(text_color=self.theme["muted"])
+                label.configure(text_color=CALENDAR_WEEKDAY_TEXT)
         
         # Update calendar frame
         if hasattr(self, 'calendar_frame'):
             self.calendar_frame.configure(
                 fg_color="transparent",
                 border_width=0,
-                border_color=self.theme.get("border", self.theme.get("progress_track", "#3a3a3a"))
+                border_color=CALENDAR_BORDER
             )
+        if hasattr(self, 'calendar_canvas'):
+            self.calendar_canvas.configure(bg=CALENDAR_SURFACE)
         
         # Update day buttons with current theme
         self.update_calendar()
@@ -702,34 +732,47 @@ class ModernCalendarWidget(ModernMiniWidget):
 
                 if is_today:
                     fg_color = CALENDAR_TODAY_COLOR
-                    hover_color = CALENDAR_TODAY_HOVER
                     text_color = "#111111"
                     bold = True
                 elif not is_current_month:
                     fg_color = "transparent"
-                    hover_color = self.theme["button_hover"]
-                    text_color = self.theme.get("progress_track", self.theme.get("muted", "#666666"))
+                    text_color = CALENDAR_MUTED_TEXT
                     bold = True
                 elif is_weekend:
                     fg_color = "transparent"
-                    hover_color = self.theme["button_hover"]
-                    text_color = self.theme.get("muted", "#8a8a8a")
+                    text_color = CALENDAR_WEEKDAY_TEXT
                     bold = True
                 else:
                     fg_color = "transparent"
-                    hover_color = self.theme["button_hover"]
-                    text_color = self.theme["text"]
+                    text_color = CALENDAR_TEXT
                     bold = True
 
                 btn.configure(
                     text=str(day_date.day),
                     fg_color=fg_color,
-                    hover_color=hover_color,
                     text_color=text_color,
                     font=calendar_day_font(self, self.calendar_frame, bold=bold),
                 )
 
+        redraw_calendar_canvas(self, getattr(self, "calendar_canvas", None))
         self.update_time()
+
+    def _on_calendar_canvas_release(self, event) -> None:
+        clicked_date = calendar_canvas_date_at_point(
+            self.calendar_canvas,
+            self,
+            self.display_year,
+            self.display_month,
+            int(event.x),
+            int(event.y),
+        )
+        if clicked_date is None:
+            return
+        if hasattr(self.master, 'status_service'):
+            self.master.status_service.info(
+                f"Selected: {clicked_date.strftime('%A, %B %d, %Y')}",
+                toast=True
+            )
 
     def update_time(self):
         from datetime import datetime
