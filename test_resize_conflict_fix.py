@@ -117,6 +117,41 @@ def test_shared_resize_uses_logical_geometry():
     return True
 
 
+def test_scaled_pointer_coordinates_use_geometry_units():
+    """High-DPI pointer deltas should not inflate widget geometry."""
+    from widgets.window_interactions import geometry_root_point, start_resize, widget_point
+
+    class FakeWindow:
+        def geometry(self):
+            return "280x210+40+50"
+
+        def _get_window_scaling(self):
+            return 1.5
+
+    class FakeEvent:
+        x_root = 300
+        y_root = 360
+
+    window = FakeWindow()
+    root_x, root_y = geometry_root_point(window, FakeEvent())
+    if (root_x, root_y) != (200, 240):
+        print(f"FAIL: Scaled root point was {(root_x, root_y)}")
+        return False
+
+    point_x, point_y = widget_point(window, FakeEvent())
+    if (point_x, point_y) != (160, 190):
+        print(f"FAIL: Scaled widget point was {(point_x, point_y)}")
+        return False
+
+    start_resize(window, FakeEvent(), "se")
+    if window._resize_start_x != 200 or window._resize_start_y != 240:
+        print("FAIL: Resize start kept raw screen coordinates")
+        return False
+
+    print("OK: Scaled pointer coordinates use geometry units")
+    return True
+
+
 def test_drag_target_binding_is_idempotent():
     """Repeated widget refreshes should not stack drag callbacks."""
     from widgets.window_interactions import bind_drag_target
@@ -159,6 +194,7 @@ if __name__ == "__main__":
     success = (
         test_resize_conflict_fix()
         and test_shared_resize_uses_logical_geometry()
+        and test_scaled_pointer_coordinates_use_geometry_units()
         and test_drag_target_binding_is_idempotent()
     )
     sys.exit(0 if success else 1)

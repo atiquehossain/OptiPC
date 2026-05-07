@@ -22,6 +22,8 @@ from widgets.window_interactions import (
     clamp_widget_size,
     configure_size_limits,
     current_widget_geometry,
+    geometry_root_point,
+    widget_point,
 )
 
 
@@ -447,8 +449,9 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         if self._is_resizing:
             return
         x, y, _width, _height = current_widget_geometry(self)
-        self._drag_start_x = event.x_root - x
-        self._drag_start_y = event.y_root - y
+        root_x, root_y = geometry_root_point(self, event)
+        self._drag_start_x = root_x - x
+        self._drag_start_y = root_y - y
 
     def on_title_click(self, event) -> None:
         """Handle title bar clicks with double-click detection for close and reset."""
@@ -530,8 +533,9 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         if self._is_resizing:
             return
         self._exit_edit_mode(restore=False)
-        x = event.x_root - self._drag_start_x
-        y = event.y_root - self._drag_start_y
+        root_x, root_y = geometry_root_point(self, event)
+        x = root_x - self._drag_start_x
+        y = root_y - self._drag_start_y
         self.geometry(f"+{x}+{y}")
 
     def _block_child_resize_events(self, event) -> None:
@@ -586,18 +590,16 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         self.apply_cursor(self.get_resize_direction(event.x, event.y))
 
     def on_mouse_down(self, event) -> None:
-        # Convert window coordinates to widget-relative coordinates
-        widget_x = event.x_root - self.winfo_rootx()
-        widget_y = event.y_root - self.winfo_rooty()
-        
+        widget_x, widget_y = widget_point(self, event)
         direction = self.get_resize_direction(widget_x, widget_y)
         if not direction:
             return
             
         self._is_resizing = True
         self._resize_dir = direction
-        self._resize_start_x = event.x_root
-        self._resize_start_y = event.y_root
+        root_x, root_y = geometry_root_point(self, event)
+        self._resize_start_x = root_x
+        self._resize_start_y = root_y
         x, y, width, height = current_widget_geometry(self)
         self._resize_start_w = width
         self._resize_start_h = height
@@ -611,8 +613,9 @@ class ModernMiniWidget(HeaderlessEditModeMixin, ctk.CTkToplevel):
         if not self._is_resizing or not self._resize_dir:
             return
 
-        dx = event.x_root - self._resize_start_x
-        dy = event.y_root - self._resize_start_y
+        root_x, root_y = geometry_root_point(self, event)
+        dx = root_x - self._resize_start_x
+        dy = root_y - self._resize_start_y
 
         new_x = self._resize_start_win_x
         new_y = self._resize_start_win_y

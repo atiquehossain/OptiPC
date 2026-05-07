@@ -76,8 +76,15 @@ def apply_cursor(window, target, direction: str | None) -> None:
     set_widget_cursor(target, cursor)
 
 
+def geometry_root_point(window, event) -> tuple[int, int]:
+    scale = _window_scaling(window)
+    return int(round(int(event.x_root) / scale)), int(round(int(event.y_root) / scale))
+
+
 def widget_point(window, event) -> tuple[int, int]:
-    return event.x_root - window.winfo_rootx(), event.y_root - window.winfo_rooty()
+    root_x, root_y = geometry_root_point(window, event)
+    window_x, window_y, _width, _height = current_widget_geometry(window)
+    return root_x - window_x, root_y - window_y
 
 
 def control_widget_at_event(window, event):
@@ -95,8 +102,9 @@ def control_widget_at_event(window, event):
 def start_resize(window, event, direction: str) -> str:
     window._is_resizing = True
     window._resize_dir = direction
-    window._resize_start_x = event.x_root
-    window._resize_start_y = event.y_root
+    root_x, root_y = geometry_root_point(window, event)
+    window._resize_start_x = root_x
+    window._resize_start_y = root_y
     x, y, width, height = current_widget_geometry(window)
     window._resize_start_w = width
     window._resize_start_h = height
