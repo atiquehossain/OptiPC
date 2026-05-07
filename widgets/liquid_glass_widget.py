@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 from config.constants import WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
+from widgets.native_window_effects import apply_native_window_effect
 
 
 class GlassWidgetCard(ctk.CTkFrame):
@@ -38,10 +39,7 @@ class GlassWidgetCard(ctk.CTkFrame):
         self._apply_liquid_glass_effect()
     
     def _apply_liquid_glass_effect(self):
-        """Apply liquid glass effects including blur simulation and highlights."""
-        # The main glass effect comes from the semi-transparent background
-        # and subtle border. In a real implementation, we'd use platform-specific
-        # blur APIs, but for cross-platform compatibility, we simulate it.
+        """Apply liquid glass effects including native Windows blur when possible."""
         
         # Set up the glass appearance
         self.configure(
@@ -174,7 +172,9 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         
         # Double-click tracking
         self._last_click_time = 0
+        self._last_close_click_time = 0
         self._double_click_delay = 300  # milliseconds
+        self._close_after_id = None
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -201,7 +201,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text=title,
-            font=ctk.CTkFont(size=14, weight="medium"),
+            font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.theme["muted"]
         )
         self.title_label.pack(side="left")
@@ -209,20 +209,17 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         # Glass-style close button
         self.close_button = ctk.CTkButton(
             self.topbar,
-            text="×",
+            text="X",
             width=24,
             height=24,
             corner_radius=12,
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=16, weight="medium"),
-            command=self.hide_widget,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            command=self.on_close_button_click,
         )
         self.close_button.pack(side="right")
-        
-        # Add double-click support to close button
-        self.close_button.bind("<ButtonPress-1>", self.on_close_button_click)
 
         # Main content area with glass spacing
         self.body = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -276,6 +273,19 @@ class LiquidGlassWidget(ctk.CTkToplevel):
                 hover_color=self.theme["button_hover"],
                 text_color=self.theme["text"]
             )
+        self.after(0, self._apply_native_glass_effect)
+
+    def _apply_native_glass_effect(self) -> None:
+        alpha = 165 if self.current_theme_name == "glass" else 215
+        try:
+            apply_native_window_effect(
+                self,
+                enabled=True,
+                tint=self.theme.get("container", self.theme.get("window_bg", "#202020")),
+                alpha=alpha,
+            )
+        except Exception:
+            pass
 
     def apply_theme(self, theme_name: str | None = None) -> None:
         if theme_name is not None:
@@ -300,12 +310,16 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         }
         return fixed_sizes.get(size_key, 12)
 
+    @staticmethod
+    def _tk_font_weight(weight: str) -> str:
+        return "bold" if str(weight).lower() in {"bold", "medium", "semibold"} else "normal"
+
     def create_glass_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create a glass-style label with proper typography."""
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=weight),
+            font=ctk.CTkFont(size=self.get_responsive_font_size(size_key), weight=self._tk_font_weight(weight)),
             text_color=self.theme.get(color_key, self.theme["text"])
         )
 
@@ -349,7 +363,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self._get_font_size(size_key), weight=weight),
+            font=ctk.CTkFont(size=self._get_font_size(size_key), weight=self._tk_font_weight(weight)),
             text_color=self.theme.get(color_key, self.theme["text"])
         )
     
@@ -372,23 +386,33 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="semibold"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="bold"),
             text_color=self.theme["text"]
         )
 
-    def create_glass_button(self, parent, text: str, command=None, width: int = None, height: int = 30) -> ctk.CTkButton:
+    def create_glass_button(
+        self,
+        parent,
+        text: str,
+        command=None,
+        width: int = None,
+        height: int = 30,
+        corner_radius: int | None = None,
+    ) -> ctk.CTkButton:
         """Create a glass-style button."""
+        if corner_radius is None:
+            corner_radius = self.CORNER_RADIUS_SMALL
         return ctk.CTkButton(
             parent,
             text=text,
             command=command,
             width=width,
             height=height,
-            corner_radius=self.CORNER_RADIUS_SMALL,
+            corner_radius=corner_radius,
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="medium"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="bold"),
             border_width=0
         )
 
@@ -408,6 +432,11 @@ class LiquidGlassWidget(ctk.CTkToplevel):
     def destroy_widget(self) -> None:
         self._running = False
         self.destroy()
+
+    def _finish_reset_and_close(self) -> None:
+        if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
+            self.master.on_widget_visibility_changed(self.widget_key, False)
+        self.destroy_widget()
 
     def _on_configure(self, event) -> None:
         # Disable configure handler during resize to prevent layout conflicts
@@ -463,20 +492,36 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         if not self._is_resizing:
             self.do_drag(event)
 
-    def on_close_button_click(self, event) -> None:
+    def _cancel_pending_close(self) -> None:
+        if self._close_after_id is not None:
+            try:
+                self.after_cancel(self._close_after_id)
+            except Exception:
+                pass
+            self._close_after_id = None
+
+    def _run_single_close(self) -> None:
+        self._close_after_id = None
+        self.hide_widget()
+
+    def on_close_button_click(self, event=None) -> str:
         """Handle close button clicks with double-click detection for close and reset."""
         import time
         
         current_time = time.time() * 1000  # Convert to milliseconds
         
         # Check for double-click
-        if current_time - self._last_click_time < self._double_click_delay:
+        if current_time - self._last_close_click_time < self._double_click_delay:
             # Double-click detected - close and reset widget
+            self._cancel_pending_close()
             self.reset_and_close()
-            return
+            return "break"
         
-        # Single-click - update time and let normal close proceed
-        self._last_click_time = current_time
+        # Single-click - wait briefly so a second click can reset geometry.
+        self._last_close_click_time = current_time
+        self._cancel_pending_close()
+        self._close_after_id = self.after(self._double_click_delay, self._run_single_close)
+        return "break"
 
     def reset_and_close(self) -> None:
         """Close widget and reset to default position/size."""
@@ -489,6 +534,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
                 self.after_cancel(self._geometry_save_after_id)
             except Exception:
                 pass
+        self._cancel_pending_close()
         
         # Reset to default geometry if widget_key exists
         if self.widget_key and hasattr(self.master, 'reset_widget_geometry'):
@@ -498,7 +544,7 @@ class LiquidGlassWidget(ctk.CTkToplevel):
         self.hide_widget()
         
         # Stop the widget completely
-        self.after(100, self.destroy_widget)
+        self.after(100, self._finish_reset_and_close)
 
     def do_drag(self, event) -> None:
         if self._is_resizing:

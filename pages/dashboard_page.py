@@ -9,9 +9,22 @@ from pages.base_page import BasePage
 from widgets.log_box import LogBox
 from widgets.metric_card import MetricCard
 from config.constants import DASHBOARD_ICONS, THEMES, UI_SPECS
+from services.cleanup_service import CleanupService
 
 
 class DashboardPage(BasePage):
+    def __init__(
+        self,
+        parent,
+        logger,
+        status_service,
+        system_service,
+        action_service,
+        cleanup_service: CleanupService | None = None,
+    ) -> None:
+        super().__init__(parent, logger, status_service, system_service, action_service)
+        self.cleanup_service = cleanup_service
+
     def build(self) -> None:
         wrapper = ctk.CTkScrollableFrame(self, fg_color="transparent")
         wrapper.grid(row=0, column=0, sticky="nsew")
@@ -59,6 +72,24 @@ class DashboardPage(BasePage):
         self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Net Speed Widget']} Net Speed Widget", lambda: self._open_widget("toggle_network_speed_widget", "Net Speed Widget")).grid(row=3, column=0, padx=8, pady=8, sticky="ew")
         self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Clock Widget']} Clock Widget", lambda: self._open_widget("toggle_clock_widget", "Clock Widget")).grid(row=3, column=1, padx=8, pady=8, sticky="ew")
         self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Uptime Widget']} Uptime Widget", lambda: self._open_widget("toggle_uptime_widget", "Uptime Widget")).grid(row=3, column=2, padx=8, pady=8, sticky="ew")
+
+        # Smart Widgets Row 1
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['PC Health Widget']} PC Health", lambda: self._open_widget("toggle_pc_health_widget", "PC Health Widget")).grid(row=4, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Top Processes Widget']} Top Processes", lambda: self._open_widget("toggle_top_processes_widget", "Top Processes Widget")).grid(row=4, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Battery Widget']} Battery", lambda: self._open_widget("toggle_battery_health_widget", "Battery Widget")).grid(row=4, column=2, padx=8, pady=8, sticky="ew")
+
+        # Smart Widgets Row 2
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Cleanup Widget']} Cleanup", lambda: self._open_widget("toggle_storage_cleanup_widget", "Cleanup Widget")).grid(row=5, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Disk IO Widget']} Disk I/O", lambda: self._open_widget("toggle_disk_io_widget", "Disk I/O Widget")).grid(row=5, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Network Quality Widget']} Network Quality", lambda: self._open_widget("toggle_network_quality_widget", "Network Quality Widget")).grid(row=5, column=2, padx=8, pady=8, sticky="ew")
+
+        # Smart Widgets Row 3
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Windows Update Widget']} Windows Update", lambda: self._open_widget("toggle_windows_update_widget", "Windows Update Widget")).grid(row=6, column=0, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Temperature Widget']} Temperature", lambda: self._open_widget("toggle_temperature_widget", "Temperature Widget")).grid(row=6, column=1, padx=8, pady=8, sticky="ew")
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Quick Actions Widget']} Quick Actions", lambda: self._open_widget("toggle_quick_actions_widget", "Quick Actions Widget")).grid(row=6, column=2, padx=8, pady=8, sticky="ew")
+
+        # Smart Widgets Row 4
+        self.make_action_button(button_frame, f"{DASHBOARD_ICONS['Timeline Widget']} Timeline", lambda: self._open_widget("toggle_performance_timeline_widget", "Timeline Widget")).grid(row=7, column=0, padx=8, pady=8, sticky="ew")
         # Live CPU Monitor
         live_card = self.make_card(wrapper, f"{DASHBOARD_ICONS['Live CPU Monitor']} Live CPU Monitor", "Real-time CPU performance monitoring")
         live_card.grid(row=1, column=2, columnspan=2, padx=UI_SPECS["cards"]["header_padding"], pady=UI_SPECS["cards"]["header_padding"], sticky="nsew")
@@ -132,8 +163,17 @@ class DashboardPage(BasePage):
             self.status_service.error(f"{widget_name} is not available", toast=True)
 
     def _quick_cleanup(self) -> None:
-        removed, failed = self.system_service.quick_cleanup_temp()
-        self.logger.write(f"Quick cleanup completed. Removed: {removed}, Failed: {failed}")
+        if self.cleanup_service is not None:
+            result = self.cleanup_service.quick_cleanup(self.logger.write)
+            self.logger.write(
+                "Quick cleanup completed. "
+                f"Removed: {result['removed']}, Failed: {result['failed']}, "
+                f"Skipped: {result['skipped']}, "
+                f"Freed: {self.cleanup_service.format_bytes(result['bytes_freed'])}"
+            )
+        else:
+            removed, failed = self.system_service.quick_cleanup_temp()
+            self.logger.write(f"Quick cleanup completed. Removed: {removed}, Failed: {failed}")
         self.status_service.success("Quick cleanup finished", toast=True)
 
     def _show_system_info(self) -> None:

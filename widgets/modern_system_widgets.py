@@ -664,7 +664,7 @@ class ModernCalendarWidget(ModernMiniWidget):
                             fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
                             hover_color=self.theme["button_hover"],
                             text_color="white",
-                            font=ctk.CTkFont(size=FONT_SIZES["body"], weight="semibold")
+                            font=ctk.CTkFont(size=FONT_SIZES["body"], weight="bold")
                         )
                     elif is_weekend:
                         btn.configure(
@@ -684,7 +684,7 @@ class ModernCalendarWidget(ModernMiniWidget):
                     btn.configure(
                         text="",
                         fg_color="transparent",
-                        hover_color="transparent",
+                        hover_color=self.theme["button_hover"],
                         text_color=self.theme["text"]
                     )
         

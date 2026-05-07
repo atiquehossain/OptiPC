@@ -674,7 +674,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color=self.theme.get("calendar_accent", self.theme["accent"]),
                             hover_color=self.theme["button_hover"],
                             text_color="white",
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="semibold")
+                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="bold")
                         )
                     elif is_weekend:
                         # Weekend gets subtle red text
@@ -682,7 +682,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color="transparent",
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme.get("calendar_accent", self.theme["accent"]),
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="medium")
+                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="bold")
                         )
                     elif not is_current_month:
                         # Other month days get very muted text
@@ -698,14 +698,14 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                             fg_color="transparent",
                             hover_color=self.theme["button_hover"],
                             text_color=self.theme["text"],
-                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="medium")
+                            font=ctk.CTkFont(size=self._get_font_size("small"), weight="bold")
                         )
                 else:
                     # Empty cells
                     btn.configure(
                         text="",
                         fg_color="transparent",
-                        hover_color="transparent",
+                        hover_color=self.theme["button_hover"],
                         text_color=self.theme["text"]
                     )
         

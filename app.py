@@ -39,6 +39,18 @@ from widgets.liquid_glass_widgets import (
     LiquidCPUWidget, LiquidRAMWidget, LiquidGPUWidget, LiquidPartitionsWidget, 
     LiquidStorageWidget, LiquidCalendarWidget, LiquidClockWidget, LiquidUptimeWidget
 )
+from widgets.smart_widgets import (
+    BatteryHealthWidget,
+    DiskIOWidget,
+    NetworkQualityWidget,
+    PCHealthWidget,
+    PerformanceTimelineWidget,
+    QuickActionsWidget,
+    StorageCleanupWidget,
+    TemperatureWidget,
+    TopProcessesWidget,
+    WindowsUpdateWidget,
+)
 from widgets.toast import ToastManager
 
 
@@ -176,9 +188,21 @@ class OptiPCApp(ctk.CTk):
     def _widget_builders(self) -> dict[str, type]:
         """Get widget builders based on current theme style."""
         theme_name = self.get_widget_theme_name()
+        smart_widgets = {
+            "pc_health": PCHealthWidget,
+            "top_processes": TopProcessesWidget,
+            "battery_health": BatteryHealthWidget,
+            "storage_cleanup": StorageCleanupWidget,
+            "disk_io": DiskIOWidget,
+            "network_quality": NetworkQualityWidget,
+            "windows_update": WindowsUpdateWidget,
+            "temperature": TemperatureWidget,
+            "quick_actions": QuickActionsWidget,
+            "performance_timeline": PerformanceTimelineWidget,
+        }
         
-        # Use liquid glass widgets for modern themes
-        if theme_name.startswith("modern_"):
+        # Use liquid glass widgets for the Liquid Glass and modern themes.
+        if self._uses_liquid_widget_style(theme_name):
             return {
                 "cpu": LiquidCPUWidget,
                 "ram": LiquidRAMWidget,
@@ -189,6 +213,7 @@ class OptiPCApp(ctk.CTk):
                 "calendar": LiquidCalendarWidget,
                 "clock": LiquidClockWidget,
                 "uptime": LiquidUptimeWidget,
+                **smart_widgets,
             }
         else:
             # Use original widgets for other themes
@@ -202,7 +227,12 @@ class OptiPCApp(ctk.CTk):
                 "calendar": CalendarWidget,
                 "clock": ClockWidget,
                 "uptime": UptimeWidget,
+                **smart_widgets,
             }
+
+    @staticmethod
+    def _uses_liquid_widget_style(theme_name: str) -> bool:
+        return theme_name == "glass" or theme_name.startswith("modern_")
 
     def get_widget_theme_name(self) -> str:
         return self.app_settings.get_widget_theme()
@@ -238,34 +268,12 @@ class OptiPCApp(ctk.CTk):
 
     def _set_widget_ref(self, key: str, widget) -> None:
         self.widgets[key] = widget
-        attr_map = {
-            "cpu": "cpu_widget",
-            "ram": "ram_widget",
-            "gpu": "gpu_widget",
-            "partitions": "partitions_widget",
-            "storage": "storage_widget",
-            "network_speed": "network_speed_widget",
-            "calendar": "calendar_widget",
-            "clock": "clock_widget",
-            "uptime": "uptime_widget",
-        }
-        setattr(self, attr_map[key], widget)
+        setattr(self, f"{key}_widget", widget)
 
     def _get_widget_ref(self, key: str):
         widget = self.widgets.get(key)
         if widget is None:
-            attr_map = {
-                "cpu": "cpu_widget",
-                "ram": "ram_widget",
-                "gpu": "gpu_widget",
-                "partitions": "partitions_widget",
-                "storage": "storage_widget",
-                "network_speed": "network_speed_widget",
-                "calendar": "calendar_widget",
-                "clock": "clock_widget",
-                "uptime": "uptime_widget",
-            }
-            widget = getattr(self, attr_map[key], None)
+            widget = getattr(self, f"{key}_widget", None)
             self.widgets[key] = widget
         return widget
 
@@ -276,8 +284,11 @@ class OptiPCApp(ctk.CTk):
             widget_class = self._widget_builders()[key]
             theme_name = self.get_widget_theme_name()
             
-            # Pass theme_name to Modern widgets
-            if theme_name.startswith("modern_"):
+            # Liquid and smart widgets accept an explicit theme. Original base
+            # widgets read the current theme from the parent.
+            if self._uses_liquid_widget_style(theme_name) and key not in {
+                "network_speed",
+            }:
                 widget = widget_class(self, theme_name=theme_name)
             else:
                 widget = widget_class(self)
@@ -369,7 +380,14 @@ class OptiPCApp(ctk.CTk):
 
     def _build_page(self, page_name: str):
         if page_name == "Dashboard":
-            return DashboardPage(self.content, self.logger, self.status_service, self.system_service, self.action_service)
+            return DashboardPage(
+                self.content,
+                self.logger,
+                self.status_service,
+                self.system_service,
+                self.action_service,
+                self.cleanup_service,
+            )
         if page_name == "Cleanup":
             return CleanupPage(self.content, self.logger, self.status_service, self.system_service, self.action_service, self.cleanup_service)
         if page_name == "Repair":
@@ -417,11 +435,12 @@ class OptiPCApp(ctk.CTk):
         self.topbar.set_title(page_name)
 
     def change_theme(self, mode: str) -> None:
-        # Extract the actual mode from the themed string
-        actual_mode = "Dark" if "🌙" in mode else "Light"
+        mode_text = str(mode).lower()
+        actual_mode = "Dark" if "dark" in mode_text else "Light"
+        display_mode = "🌙 Dark" if actual_mode == "Dark" else "☀️ Light"
         ctk.set_appearance_mode(actual_mode.lower())
         self.app_settings.set_appearance_mode(actual_mode)
-        self.topbar.theme_switch.set(mode)
+        self.topbar.theme_switch.set(display_mode)
         self.sidebar.update_theme(actual_mode.lower())
         self.status_service.success(f"App theme changed to {actual_mode}", toast=True)
 
@@ -465,6 +484,36 @@ class OptiPCApp(ctk.CTk):
 
     def toggle_uptime_widget(self) -> None:
         self._toggle_widget("uptime")
+
+    def toggle_pc_health_widget(self) -> None:
+        self._toggle_widget("pc_health")
+
+    def toggle_top_processes_widget(self) -> None:
+        self._toggle_widget("top_processes")
+
+    def toggle_battery_health_widget(self) -> None:
+        self._toggle_widget("battery_health")
+
+    def toggle_storage_cleanup_widget(self) -> None:
+        self._toggle_widget("storage_cleanup")
+
+    def toggle_disk_io_widget(self) -> None:
+        self._toggle_widget("disk_io")
+
+    def toggle_network_quality_widget(self) -> None:
+        self._toggle_widget("network_quality")
+
+    def toggle_windows_update_widget(self) -> None:
+        self._toggle_widget("windows_update")
+
+    def toggle_temperature_widget(self) -> None:
+        self._toggle_widget("temperature")
+
+    def toggle_quick_actions_widget(self) -> None:
+        self._toggle_widget("quick_actions")
+
+    def toggle_performance_timeline_widget(self) -> None:
+        self._toggle_widget("performance_timeline")
 
 
 SmartPCToolkitApp = OptiPCApp

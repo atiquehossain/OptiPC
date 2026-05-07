@@ -10,14 +10,14 @@ class ModernWidgetCard(ctk.CTkFrame):
     def __init__(
         self,
         parent,
-        theme_name: str = "apple_dark",
+        theme_name: str = "modern_dark",
         corner_radius: int = 24,
         width: int = 280,
         height: int = 180,
         **kwargs
     ):
         self.theme_name = theme_name
-        self.theme = WIDGET_THEMES.get(theme_name, WIDGET_THEMES["apple_dark"])
+        self.theme = WIDGET_THEMES.get(theme_name, WIDGET_THEMES["modern_dark"])
         
         # Remove fg_color from kwargs if present to avoid conflicts
         if "fg_color" in kwargs:
@@ -73,7 +73,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         x: int = 40,
         y: int = 40,
         widget_key: str = "",
-        theme_name: str = "apple_dark",
+        theme_name: str = "modern_dark",
         size_category: str = "default",
     ) -> None:
         # Use standard size if dimensions not provided
@@ -109,7 +109,9 @@ class ModernMiniWidget(ctk.CTkToplevel):
         
         # Double-click tracking
         self._last_click_time = 0
+        self._last_close_click_time = 0
         self._double_click_delay = 300  # milliseconds
+        self._close_after_id = None
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -136,7 +138,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text=title,
-            font=ctk.CTkFont(size=FONT_SIZES["label"], weight="medium"),
+            font=ctk.CTkFont(size=FONT_SIZES["label"], weight="bold"),
             text_color=self.theme["muted"]
         )
         self.title_label.pack(side="left")
@@ -151,13 +153,10 @@ class ModernMiniWidget(ctk.CTkToplevel):
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=16, weight="medium"),
-            command=self.hide_widget,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            command=self.on_close_button_click,
         )
         self.close_button.pack(side="right")
-        
-        # Add double-click support to close button
-        self.close_button.bind("<ButtonPress-1>", self.on_close_button_click)
 
         # Main content area with generous padding
         self.body = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -191,10 +190,10 @@ class ModernMiniWidget(ctk.CTkToplevel):
     def _get_initial_theme_name(self) -> str:
         if hasattr(self.master, "get_widget_theme_name"):
             return str(self.master.get_widget_theme_name())
-        return "apple_dark"
+        return "modern_dark"
 
     def _apply_base_theme(self) -> None:
-        self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["apple_dark"])
+        self.theme = WIDGET_THEMES.get(self.current_theme_name, WIDGET_THEMES["modern_dark"])
         self.configure(fg_color=self.theme["window_bg"])
         self.attributes("-alpha", self.theme.get("alpha", 0.98))
         
@@ -267,12 +266,16 @@ class ModernMiniWidget(ctk.CTkToplevel):
         progress.set(0)
         return progress
 
+    @staticmethod
+    def _tk_font_weight(weight: str) -> str:
+        return "bold" if str(weight).lower() in {"bold", "medium", "semibold"} else "normal"
+
     def create_apple_label(self, parent, text: str, size_key: str = "body", weight: str = "normal", color_key: str = "text") -> ctk.CTkLabel:
         """Create an Modern-style label with proper typography."""
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=FONT_SIZES[size_key], weight=weight),
+            font=ctk.CTkFont(size=FONT_SIZES[size_key], weight=self._tk_font_weight(weight)),
             text_color=self.theme.get(color_key, self.theme["text"])
         )
 
@@ -281,23 +284,33 @@ class ModernMiniWidget(ctk.CTkToplevel):
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="semibold"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("metric"), weight="bold"),
             text_color=self.theme["text"]
         )
 
-    def create_apple_button(self, parent, text: str, command=None, width: int = None, height: int = 30) -> ctk.CTkButton:
+    def create_apple_button(
+        self,
+        parent,
+        text: str,
+        command=None,
+        width: int = None,
+        height: int = 30,
+        corner_radius: int | None = None,
+    ) -> ctk.CTkButton:
         """Create an Modern-style button with subtle styling."""
+        if corner_radius is None:
+            corner_radius = self.CORNER_RADIUS_SMALL
         return ctk.CTkButton(
             parent,
             text=text,
             command=command,
             width=width,
             height=height,
-            corner_radius=self.CORNER_RADIUS_SMALL,
+            corner_radius=corner_radius,
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="medium"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("body"), weight="bold"),
             border_width=0
         )
 
@@ -317,6 +330,11 @@ class ModernMiniWidget(ctk.CTkToplevel):
     def destroy_widget(self) -> None:
         self._running = False
         self.destroy()
+
+    def _finish_reset_and_close(self) -> None:
+        if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
+            self.master.on_widget_visibility_changed(self.widget_key, False)
+        self.destroy_widget()
 
     def _on_configure(self, event) -> None:
         if event.widget is not self:
@@ -371,20 +389,36 @@ class ModernMiniWidget(ctk.CTkToplevel):
         if not self._is_resizing:
             self.do_drag(event)
 
-    def on_close_button_click(self, event) -> None:
+    def _cancel_pending_close(self) -> None:
+        if self._close_after_id is not None:
+            try:
+                self.after_cancel(self._close_after_id)
+            except Exception:
+                pass
+            self._close_after_id = None
+
+    def _run_single_close(self) -> None:
+        self._close_after_id = None
+        self.hide_widget()
+
+    def on_close_button_click(self, event=None) -> str:
         """Handle close button clicks with double-click detection for close and reset."""
         import time
         
         current_time = time.time() * 1000  # Convert to milliseconds
         
         # Check for double-click
-        if current_time - self._last_click_time < self._double_click_delay:
+        if current_time - self._last_close_click_time < self._double_click_delay:
             # Double-click detected - close and reset widget
+            self._cancel_pending_close()
             self.reset_and_close()
-            return
+            return "break"
         
-        # Single-click - update time and let normal close proceed
-        self._last_click_time = current_time
+        # Single-click - wait briefly so a second click can reset geometry.
+        self._last_close_click_time = current_time
+        self._cancel_pending_close()
+        self._close_after_id = self.after(self._double_click_delay, self._run_single_close)
+        return "break"
 
     def reset_and_close(self) -> None:
         """Close widget and reset to default position/size."""
@@ -397,6 +431,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
                 self.after_cancel(self._geometry_save_after_id)
             except Exception:
                 pass
+        self._cancel_pending_close()
         
         # Reset to default geometry if widget_key exists
         if self.widget_key and hasattr(self.master, 'reset_widget_geometry'):
@@ -406,7 +441,7 @@ class ModernMiniWidget(ctk.CTkToplevel):
         self.hide_widget()
         
         # Stop the widget completely
-        self.after(100, self.destroy_widget)
+        self.after(100, self._finish_reset_and_close)
 
     def do_drag(self, event) -> None:
         if self._is_resizing:

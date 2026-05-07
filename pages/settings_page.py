@@ -41,7 +41,7 @@ class SettingsPage(BasePage):
         ctk.CTkLabel(appearance, text="Widget theme").pack(anchor="w", padx=18, pady=(0, 6))
         widget_mode = ctk.CTkSegmentedButton(
             appearance,
-            values=["Dark", "Light", "Liquid Glass"],
+            values=["Dark", "Light", "Liquid Glass", "Modern Dark", "Modern Light"],
             command=self._change_widget_theme,
         )
         widget_mode.pack(anchor="w", padx=18, pady=(0, 18))
@@ -49,7 +49,7 @@ class SettingsPage(BasePage):
 
         ctk.CTkLabel(
             appearance,
-            text="Widgets update live. Try switching between Dark, Light, and Liquid Glass while widgets are open.",
+            text="Widgets update live. Try switching between Dark, Light, Liquid Glass, and Modern styles while widgets are open.",
             justify="left",
             wraplength=420,
             text_color="gray75",

@@ -17,25 +17,70 @@ class MultiArchBuilder:
         self.current_dir = Path(__file__).parent
         self.build_dir = self.current_dir / "builds"
         self.build_dir.mkdir(exist_ok=True)
+        self.host_arch = self.detect_host_arch()
         
         # Architecture configurations
         self.architectures = {
             "x64": {
                 "name": "64-bit (x64)",
                 "target": "x86_64",
+                "machine": "x64",
                 "description": "For modern 64-bit Windows systems"
             },
             "x86": {
                 "name": "32-bit (x86)", 
                 "target": "x86",
+                "machine": "x86",
                 "description": "For older 32-bit Windows systems"
             },
             "arm64": {
                 "name": "ARM64",
                 "target": "arm64", 
+                "machine": "arm64",
                 "description": "For Windows on ARM devices (Surface Pro X, etc.)"
             }
         }
+
+    def detect_host_arch(self):
+        """Return the architecture PyInstaller can build natively on this host."""
+        machine = platform.machine().lower()
+        if machine in ['amd64', 'x86_64']:
+            return 'x64'
+        if machine in ['i386', 'i686', 'x86']:
+            return 'x86'
+        if machine in ['arm64', 'aarch64']:
+            return 'arm64'
+        return 'x64'
+
+    def native_build_note(self, arch_key):
+        if arch_key == self.host_arch:
+            return "Built on matching host architecture."
+        return (
+            f"Built on {self.host_arch} host. PyInstaller for Windows does not "
+            "reliably cross-compile native bootloaders; validate or rebuild this "
+            "package on the target architecture before public distribution."
+        )
+
+    @staticmethod
+    def detect_pe_architecture(exe_path):
+        machine_map = {
+            0x014C: "x86",
+            0x8664: "x64",
+            0xAA64: "arm64",
+        }
+        try:
+            with open(exe_path, "rb") as file:
+                if file.read(2) != b"MZ":
+                    return "unknown"
+                file.seek(0x3C)
+                pe_offset = int.from_bytes(file.read(4), "little")
+                file.seek(pe_offset)
+                if file.read(4) != b"PE\0\0":
+                    return "unknown"
+                machine = int.from_bytes(file.read(2), "little")
+            return machine_map.get(machine, f"unknown-0x{machine:04x}")
+        except OSError:
+            return "unknown"
     
     def install_pyinstaller(self):
         """Install PyInstaller if not already installed"""
@@ -55,7 +100,7 @@ class MultiArchBuilder:
     
     def clean_build_dirs(self):
         """Clean previous build directories"""
-        dirs_to_clean = ["build", "dist", "__pycache__"]
+        dirs_to_clean = ["build", "dist", "builds", "__pycache__"]
         for dir_name in dirs_to_clean:
             dir_path = self.current_dir / dir_name
             if dir_path.exists():
@@ -65,10 +110,13 @@ class MultiArchBuilder:
                 except PermissionError:
                     print(f"⚠ Could not clean {dir_name} directory - files may be in use")
                     print(f"  Please close any running OptiPC instances and try again")
+        self.build_dir.mkdir(exist_ok=True)
     
     def build_for_architecture(self, arch_key):
         """Build executable for specific architecture"""
         arch_config = self.architectures[arch_key]
+        if arch_key != self.host_arch:
+            print(f"Note: {self.native_build_note(arch_key)}")
         print(f"\n🔨 Building for {arch_config['name']} ({arch_config['description']})")
         
         # Architecture-specific PyInstaller command
@@ -97,7 +145,6 @@ class MultiArchBuilder:
             "--hidden-import=shutil",
             "--hidden-import=pathlib",
             "--hidden-import=datetime",
-            "--uac-admin",  # Require administrator privileges
             "main.py"
         ]
         
@@ -106,6 +153,15 @@ class MultiArchBuilder:
         
         try:
             subprocess.check_call(cmd, cwd=self.current_dir)
+            exe_path = self.current_dir / "dist" / f"OptiPC_{arch_key}.exe"
+            actual_arch = self.detect_pe_architecture(exe_path)
+            expected_arch = arch_config["machine"]
+            if actual_arch != expected_arch:
+                print(
+                    f"Architecture mismatch for {arch_key}: "
+                    f"expected {expected_arch}, got {actual_arch}"
+                )
+                return False
             print(f"✓ Successfully built {arch_key} executable")
             return True
         except subprocess.CalledProcessError as e:
@@ -140,6 +196,9 @@ class MultiArchBuilder:
         # Create installation instructions
         install_instructions = f"""OptiPC - {arch_config['name']} Release
 {arch_config['description']}
+
+Build Note:
+{self.native_build_note(arch_key)}
 
 Installation:
 1. Extract all files to a folder
@@ -179,9 +238,9 @@ Troubleshooting:
         print(f"✓ Created release package: {zip_name}")
         return True
     
-    def build_all_architectures(self):
+    def build_all_architectures(self, allow_cross_builds=False):
         """Build executables for all architectures"""
-        print("🚀 OptiPC Multi-Architecture Builder (With Admin Rights)")
+        print("OptiPC Multi-Architecture Builder")
         print("=" * 60)
         
         # Install PyInstaller
@@ -191,45 +250,48 @@ Troubleshooting:
         # Clean previous builds
         self.clean_build_dirs()
         
-        # Build for each architecture
+        # Build only architectures that can be validated on this host by default.
         successful_builds = []
-        for arch_key in self.architectures.keys():
-            print(f"\n🔨 Building {arch_key} with administrator privileges...")
+        target_architectures = list(self.architectures.keys()) if allow_cross_builds else [self.host_arch]
+        skipped_builds = [arch for arch in self.architectures if arch not in target_architectures]
+        for arch_key in target_architectures:
+            print(f"\nBuilding {arch_key}...")
             if self.build_for_architecture(arch_key):
                 if self.create_release_package(arch_key):
                     successful_builds.append(arch_key)
         
         # Summary
         print("\n" + "=" * 60)
-        print("📊 Build Summary (All with Admin Rights):")
+        print("Build Summary:")
         for arch_key in self.architectures.keys():
             status = "✓ Success" if arch_key in successful_builds else "✗ Failed"
+            if arch_key in skipped_builds:
+                status = "Skipped - rebuild on native target"
+            elif arch_key in successful_builds:
+                status = "Success"
+            else:
+                status = "Failed"
             arch_config = self.architectures[arch_key]
             print(f"  {arch_config['name']}: {status}")
         
         if successful_builds:
+            cross_built = [arch for arch in successful_builds if arch != self.host_arch]
+            if cross_built:
+                print("\nArchitecture validation note:")
+                print("  " + self.native_build_note(cross_built[0]))
             print(f"\n📦 Release packages created in: {self.build_dir}")
             print("\n📋 Distribution Instructions:")
             print("1. Share the ZIP files for each architecture")
             print("2. Users extract and run the appropriate executable")
-            print("3. All versions will automatically prompt for admin rights")
+            print("3. The app runs normally; selected repair actions request admin rights only when needed")
             print("4. No installation required - fully portable")
         
         return len(successful_builds) > 0
     
-    def build_single_architecture(self, arch_key=None):
+    def build_single_architecture(self, arch_key=None, allow_cross_builds=False):
         """Build for a specific architecture"""
         if arch_key is None:
-            # Auto-detect current architecture
-            machine = platform.machine().lower()
-            if machine in ['amd64', 'x86_64']:
-                arch_key = 'x64'
-            elif machine in ['i386', 'i686']:
-                arch_key = 'x86'
-            elif machine in ['arm64', 'aarch64']:
-                arch_key = 'arm64'
-            else:
-                arch_key = 'x64'  # Default to x64
+            arch_key = self.host_arch
         
         if arch_key not in self.architectures:
             print(f"❌ Invalid architecture: {arch_key}")
@@ -238,6 +300,11 @@ Troubleshooting:
         
         print(f"🎯 Building single architecture: {arch_key}")
         
+        if arch_key != self.host_arch and not allow_cross_builds:
+            print(self.native_build_note(arch_key))
+            print("Skipped. Run this build on the target architecture, or pass --allow-cross for experimental output.")
+            return False
+
         # Install PyInstaller
         if not self.install_pyinstaller():
             return False
@@ -257,17 +324,20 @@ Troubleshooting:
 
 def main():
     builder = MultiArchBuilder()
+    args = sys.argv[1:]
+    allow_cross_builds = "--allow-cross" in args
+    args = [arg for arg in args if arg != "--allow-cross"]
     
-    if len(sys.argv) > 1:
-        arg = sys.argv[1]
+    if args:
+        arg = args[0]
         if arg == "--all":
-            builder.build_all_architectures()
+            builder.build_all_architectures(allow_cross_builds)
         elif arg == "--x64":
-            builder.build_single_architecture("x64")
+            builder.build_single_architecture("x64", allow_cross_builds)
         elif arg == "--x86":
-            builder.build_single_architecture("x86")
+            builder.build_single_architecture("x86", allow_cross_builds)
         elif arg == "--arm64":
-            builder.build_single_architecture("arm64")
+            builder.build_single_architecture("arm64", allow_cross_builds)
         elif arg == "--help":
             print("""
 OptiPC Multi-Architecture Builder
@@ -276,10 +346,11 @@ Usage:
   python build_multi_arch.py [option]
 
 Options:
-  --all        Build for all architectures (x64, x86, arm64)
+  --all        Build validated packages for this host architecture
   --x64        Build only for 64-bit systems
   --x86        Build only for 32-bit systems  
   --arm64      Build only for ARM64 systems
+  --allow-cross  Experimental: attempt non-native PyInstaller output
   [no args]    Build for current system architecture
 
 Examples:
@@ -294,7 +365,7 @@ Examples:
         # Build for current architecture
         builder.build_single_architecture()
     
-    if len(sys.argv) <= 1:
+    if not args:
         input("\nPress Enter to exit...")
 
 if __name__ == "__main__":

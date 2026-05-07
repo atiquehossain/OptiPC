@@ -1,6 +1,9 @@
 OptiPC - 64-bit (x64) Release
 For modern 64-bit Windows systems
 
+Build Note:
+Built on matching host architecture.
+
 Installation:
 1. Extract all files to a folder
 2. Run OptiPC_x64.exe
@@ -12,8 +15,8 @@ System Requirements:
 
 File Information:
 - Executable: OptiPC_x64.exe
-- Size: 19.0 MB
-- Built: 2026-03-23 23:06:36
+- Size: 32.2 MB
+- Built: 2026-05-07 11:08:15
 
 Troubleshooting:
 - If antivirus blocks the executable, add it to exceptions

@@ -3,6 +3,7 @@ from __future__ import annotations
 import customtkinter as ctk
 
 from config.constants import FONT_SIZES, WIDGET_THEMES, WIDGET_SIZES, RESPONSIVE_FONT_SIZES
+from widgets.native_window_effects import apply_native_window_effect
 
 
 class BaseMiniWidget(ctk.CTkToplevel):
@@ -62,7 +63,9 @@ class BaseMiniWidget(ctk.CTkToplevel):
         
         # Double-click tracking
         self._last_click_time = 0
+        self._last_close_click_time = 0
         self._double_click_delay = 300  # milliseconds
+        self._close_after_id = None
 
         self.title(title)
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -88,16 +91,13 @@ class BaseMiniWidget(ctk.CTkToplevel):
 
         self.close_button = ctk.CTkButton(
             self.topbar,
-            text="×",
+            text="X",
             width=28,
             height=28,
             corner_radius=14,
-            command=self.hide_widget,
+            command=self.on_close_button_click,
         )
         self.close_button.pack(side="right")
-        
-        # Add double-click support to close button
-        self.close_button.bind("<ButtonPress-1>", self.on_close_button_click)
 
         self.body = ctk.CTkFrame(self.container, fg_color="transparent")
         self.body.pack(fill="both", expand=True, padx=12, pady=(4, 12))
@@ -145,6 +145,20 @@ class BaseMiniWidget(ctk.CTkToplevel):
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
         )
+        self.after(0, self._apply_native_glass_effect)
+
+    def _apply_native_glass_effect(self) -> None:
+        enabled = self.current_theme_name == "glass" or self.current_theme_name.startswith("modern_")
+        alpha = 165 if self.current_theme_name == "glass" else 215
+        try:
+            apply_native_window_effect(
+                self,
+                enabled=enabled,
+                tint=self.theme.get("container", self.theme.get("window_bg", "#202020")),
+                alpha=alpha,
+            )
+        except Exception:
+            pass
 
     def apply_theme(self, theme_name: str | None = None) -> None:
         if theme_name is not None:
@@ -204,6 +218,11 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self._running = False
         self.destroy()
 
+    def _finish_reset_and_close(self) -> None:
+        if hasattr(self.master, "on_widget_visibility_changed") and self.widget_key:
+            self.master.on_widget_visibility_changed(self.widget_key, False)
+        self.destroy_widget()
+
     def _on_configure(self, event) -> None:
         # Disable configure handler during resize to prevent layout conflicts
         if event.widget is not self or self._is_resizing:
@@ -258,20 +277,36 @@ class BaseMiniWidget(ctk.CTkToplevel):
         if not self._is_resizing:
             self.do_drag(event)
 
-    def on_close_button_click(self, event) -> None:
+    def _cancel_pending_close(self) -> None:
+        if self._close_after_id is not None:
+            try:
+                self.after_cancel(self._close_after_id)
+            except Exception:
+                pass
+            self._close_after_id = None
+
+    def _run_single_close(self) -> None:
+        self._close_after_id = None
+        self.hide_widget()
+
+    def on_close_button_click(self, event=None) -> str:
         """Handle close button clicks with double-click detection for close and reset."""
         import time
         
         current_time = time.time() * 1000  # Convert to milliseconds
         
         # Check for double-click
-        if current_time - self._last_click_time < self._double_click_delay:
+        if current_time - self._last_close_click_time < self._double_click_delay:
             # Double-click detected - close and reset widget
+            self._cancel_pending_close()
             self.reset_and_close()
-            return
+            return "break"
         
-        # Single-click - update time and let normal close proceed
-        self._last_click_time = current_time
+        # Single-click - wait briefly so a second click can reset geometry.
+        self._last_close_click_time = current_time
+        self._cancel_pending_close()
+        self._close_after_id = self.after(self._double_click_delay, self._run_single_close)
+        return "break"
 
     def reset_and_close(self) -> None:
         """Close widget and reset to default position/size."""
@@ -284,6 +319,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
                 self.after_cancel(self._geometry_save_after_id)
             except Exception:
                 pass
+        self._cancel_pending_close()
         
         # Reset to default geometry if widget_key exists
         if self.widget_key and hasattr(self.master, 'reset_widget_geometry'):
@@ -293,7 +329,7 @@ class BaseMiniWidget(ctk.CTkToplevel):
         self.hide_widget()
         
         # Stop the widget completely
-        self.after(100, self.destroy_widget)
+        self.after(100, self._finish_reset_and_close)
 
     def do_drag(self, event) -> None:
         if self._is_resizing:

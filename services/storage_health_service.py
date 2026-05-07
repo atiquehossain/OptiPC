@@ -95,17 +95,43 @@ class StorageHealthService:
     def get_storage_health(self) -> list[StorageHealthItem]:
         script = r"""
 $ErrorActionPreference = 'SilentlyContinue'
-$physical = Get-PhysicalDisk | Select-Object \
-    @{Name='DeviceId'; Expression={ "$($_.DeviceId)" }}, FriendlyName, SerialNumber, Model, \
-    @{Name='BusType'; Expression={ "$($_.BusType)" }}, \
-    @{Name='MediaType'; Expression={ "$($_.MediaType)" }}, \
-    @{Name='HealthStatus'; Expression={ "$($_.HealthStatus)" }}, \
-    @{Name='OperationalStatus'; Expression={ ($_.OperationalStatus -join ', ') }}, \
-    FirmwareVersion, Size
-$reliability = Get-PhysicalDisk | Get-StorageReliabilityCounter | Select-Object \
-    @{Name='DeviceId'; Expression={ "$($_.DeviceId)" }}, Temperature, TemperatureMax, Wear, PowerOnHours, \
-    ReadErrorsTotal, WriteErrorsTotal, ReadErrorsUncorrected, WriteErrorsUncorrected
-$wmi = Get-CimInstance Win32_DiskDrive | Select-Object Model, SerialNumber, FirmwareRevision, InterfaceType, MediaType, Size
+$physical = Get-PhysicalDisk | ForEach-Object {
+    [PSCustomObject]@{
+        DeviceId = "$($_.DeviceId)"
+        FriendlyName = "$($_.FriendlyName)"
+        SerialNumber = "$($_.SerialNumber)"
+        Model = "$($_.Model)"
+        BusType = "$($_.BusType)"
+        MediaType = "$($_.MediaType)"
+        HealthStatus = "$($_.HealthStatus)"
+        OperationalStatus = ($_.OperationalStatus -join ', ')
+        FirmwareVersion = "$($_.FirmwareVersion)"
+        Size = $_.Size
+    }
+}
+$reliability = Get-PhysicalDisk | Get-StorageReliabilityCounter | ForEach-Object {
+    [PSCustomObject]@{
+        DeviceId = "$($_.DeviceId)"
+        Temperature = $_.Temperature
+        TemperatureMax = $_.TemperatureMax
+        Wear = $_.Wear
+        PowerOnHours = $_.PowerOnHours
+        ReadErrorsTotal = $_.ReadErrorsTotal
+        WriteErrorsTotal = $_.WriteErrorsTotal
+        ReadErrorsUncorrected = $_.ReadErrorsUncorrected
+        WriteErrorsUncorrected = $_.WriteErrorsUncorrected
+    }
+}
+$wmi = Get-CimInstance Win32_DiskDrive | ForEach-Object {
+    [PSCustomObject]@{
+        Model = "$($_.Model)"
+        SerialNumber = "$($_.SerialNumber)"
+        FirmwareRevision = "$($_.FirmwareRevision)"
+        InterfaceType = "$($_.InterfaceType)"
+        MediaType = "$($_.MediaType)"
+        Size = $_.Size
+    }
+}
 $relMap = @{}
 foreach ($r in $reliability) { $relMap["$($r.DeviceId)"] = $r }
 $out = @()

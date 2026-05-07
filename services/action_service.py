@@ -144,16 +144,27 @@ class ActionService:
     def save_installed_apps_report(report_dir: Path) -> Path:
         path = report_dir / "installed_apps.txt"
         script = r"""
-$items = Get-ItemProperty \
-'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', \
-'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*', \
-'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+$paths = @(
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+    'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+$items = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
 Where-Object { $_.DisplayName } |
 Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
 Sort-Object DisplayName
 $items | Format-Table -AutoSize | Out-String -Width 4096
 """
-        result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], capture_output=True, text=True, shell=False)
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "Installed apps report failed.")
         path.write_text(result.stdout or result.stderr, encoding="utf-8", errors="replace")
         return path
 
