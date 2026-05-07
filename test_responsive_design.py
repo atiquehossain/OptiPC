@@ -200,6 +200,11 @@ def test_bluetooth_widget_connection_summary():
         if paired_only["summary"] != "Bluetooth on | no devices connected":
             print(f"FAIL: Paired-only summary was wrong: {paired_only['summary']}")
             return False
+        widget._bluetooth_snapshot = paired_only
+        paired_only_rings = widget._ring_model()
+        if any(ring["progress"] for ring in paired_only_rings) or any(ring["icon"] for ring in paired_only_rings):
+            print("FAIL: Paired-only Bluetooth state rendered active rings or icons")
+            return False
 
         connected = widget._summarize_bluetooth_entries(
             paired_entries,
@@ -209,6 +214,11 @@ def test_bluetooth_widget_connection_summary():
         )
         if connected["connected_count"] != 1 or not connected["audio_active"]:
             print("FAIL: Active Bluetooth audio endpoint was not counted")
+            return False
+        widget._bluetooth_snapshot = connected
+        connected_rings = widget._ring_model()
+        if connected_rings[0]["progress"] != 0 or connected_rings[0]["active"]:
+            print("FAIL: Connected device without battery telemetry rendered as charged")
             return False
 
         print("OK: Bluetooth widget distinguishes paired devices from live connections")

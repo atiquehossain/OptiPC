@@ -958,6 +958,7 @@ class BluetoothWidget(SmartWidgetBase):
             "connected_count": 0,
             "device_count": 0,
             "audio_active": False,
+            "devices": [],
             "summary": "Checking Bluetooth",
         }
         self.ring_canvas = tk.Canvas(self.body, bg=self.theme["panel"], highlightthickness=0, bd=0)
@@ -1058,6 +1059,7 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
                 "connected_count": 0,
                 "device_count": 0,
                 "audio_active": False,
+                "devices": [],
                 "summary": "Bluetooth unavailable",
             }
 
@@ -1074,6 +1076,7 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
         device_entries = [entry for entry in entries if self._is_device_candidate(str(entry.get("FriendlyName") or ""))]
         paired_names = self._paired_device_names(device_entries)
         connected_names = self._connected_audio_names(paired_names, audio_endpoints)
+        devices = [{"name": name, "icon": self._device_icon_for_name(name), "battery": None} for name in connected_names]
         audio_active = bool(connected_names)
         available = bool(entries) or bool(radio_entries) or service_status == "running"
         radio_active = radio_ok or service_status == "running"
@@ -1093,6 +1096,7 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
             "connected_count": connected_count,
             "device_count": device_count,
             "audio_active": audio_active,
+            "devices": devices,
             "summary": summary,
         }
 
@@ -1133,20 +1137,37 @@ $service = Get-Service bthserv -ErrorAction SilentlyContinue | Select-Object -Fi
                     seen.add(normalized_name)
         return connected
 
+    def _device_icon_for_name(self, name: str) -> str:
+        lower = str(name or "").lower()
+        if "watch" in lower:
+            return "watch"
+        if any(token in lower for token in self._AUDIO_TOKENS):
+            return "headphones"
+        if "phone" in lower or "iphone" in lower or "android" in lower:
+            return "phone"
+        return "headphones"
+
     def _ring_model(self) -> list[dict[str, object]]:
         snapshot = self._bluetooth_snapshot
-        radio_active = bool(snapshot.get("radio_active"))
-        available = bool(snapshot.get("available"))
-        connected_count = int(snapshot.get("connected_count") or 0)
-        device_count = int(snapshot.get("device_count") or 0)
-        audio_active = bool(snapshot.get("audio_active"))
-        devices_progress = min(1.0, 0.25 + (connected_count * 0.25)) if connected_count else 0.0
-        return [
-            {"icon": "phone", "active": radio_active, "progress": 0.68 if radio_active else (0.18 if available else 0.0)},
-            {"icon": "watch", "active": radio_active and connected_count > 0, "progress": devices_progress},
-            {"icon": "headphones", "active": audio_active, "progress": 0.78 if audio_active else (0.28 if connected_count else 0.0)},
-            {"icon": "empty", "active": False, "progress": 0.0},
-        ]
+        raw_devices = snapshot.get("devices") if isinstance(snapshot, dict) else []
+        devices = raw_devices if isinstance(raw_devices, list) else []
+        rings: list[dict[str, object]] = []
+        for device in devices[:4]:
+            if not isinstance(device, dict):
+                continue
+            battery = device.get("battery")
+            has_battery = isinstance(battery, (int, float))
+            progress = max(0.0, min(float(battery) / 100.0, 1.0)) if has_battery else 0.0
+            rings.append(
+                {
+                    "icon": str(device.get("icon") or "headphones"),
+                    "active": has_battery,
+                    "progress": progress,
+                }
+            )
+        while len(rings) < 4:
+            rings.append({"icon": "", "active": False, "progress": 0.0})
+        return rings
 
     def _draw_rings(self) -> None:
         canvas = getattr(self, "ring_canvas", None)
