@@ -107,6 +107,33 @@ def test_widget_specs():
         return False
 
 
+def test_widget_text_roles():
+    """Test shared widget text roles cover the common desktop widget hierarchy."""
+    try:
+        from config.widget_style import WIDGET_TEXT_ROLES, widget_text_role
+
+        required_roles = ["hero", "metric", "title", "body", "body_bold", "caption", "caption_bold", "tiny"]
+        for role in required_roles:
+            if role not in WIDGET_TEXT_ROLES:
+                print(f"FAIL: Missing widget text role: {role}")
+                return False
+        if widget_text_role("hero").size_key != "hero":
+            print("FAIL: Hero role does not map to the hero responsive size")
+            return False
+        if widget_text_role("caption").color_key != "muted":
+            print("FAIL: Caption role does not use muted color")
+            return False
+        if widget_text_role("unknown").size_key != "body":
+            print("FAIL: Unknown text role should fall back to body")
+            return False
+
+        print("OK: Widget text roles centralize typography and color hierarchy")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Widget text role test error: {exc}")
+        return False
+
+
 def test_responsive_fonts():
     """Test responsive font scaling."""
     try:
@@ -429,6 +456,7 @@ def main():
         ("Import Tests", test_imports),
         ("Widget Size Tests", test_widget_sizes),
         ("Widget Spec Tests", test_widget_specs),
+        ("Widget Text Role Tests", test_widget_text_roles),
         ("Responsive Font Tests", test_responsive_fonts),
         ("Widget Size Limit Tests", test_widget_size_limits),
         ("Legacy Default Size Migration Tests", test_legacy_default_size_migration),

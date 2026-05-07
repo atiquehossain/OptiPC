@@ -45,3 +45,7 @@ class WidgetSpecMixin:
     def widget_accent_color(self, fallback: str | None = None) -> str:
         theme = getattr(self, "theme", {}) or {}
         return theme.get(getattr(self, "accent_key", "accent"), fallback or theme.get("accent", "#4f9cff"))
+
+    def widget_on_accent_color(self) -> str:
+        theme = getattr(self, "theme", {}) or {}
+        return theme.get("on_accent", "#ffffff")

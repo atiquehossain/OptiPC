@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import customtkinter as ctk
-from config.constants import UI_SPECS, THEMES
+from config.constants import FONT_SIZES, UI_SPECS, THEMES
 
 
 class MetricCard(ctk.CTkFrame):
@@ -25,7 +25,7 @@ class MetricCard(ctk.CTkFrame):
             header_frame, 
             text=title, 
             text_color=(THEMES["light"]["text_secondary"], THEMES["dark"]["text_secondary"]), 
-            font=ctk.CTkFont(size=12, weight="normal"),
+            font=ctk.CTkFont(size=FONT_SIZES["label"], weight="normal"),
             wraplength=180,
             justify="left",
         )
@@ -35,7 +35,7 @@ class MetricCard(ctk.CTkFrame):
         self.value_label = ctk.CTkLabel(
             self, 
             text=value, 
-            font=ctk.CTkFont(size=28, weight="bold"),
+            font=ctk.CTkFont(size=UI_SPECS["cards"]["metric_font_size"], weight="bold"),
             text_color=(THEMES["light"]["text_primary"], THEMES["dark"]["text_primary"]),
             wraplength=190,
             justify="left",

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
+from config.constants import FONT_SIZES
+
 
 class LoadingIndicator(ctk.CTkFrame):
     """Small animated progress box that tells the user the app is busy."""
 
     def __init__(self, parent) -> None:
         super().__init__(parent, corner_radius=12)
-        self.label = ctk.CTkLabel(self, text="Ready", font=ctk.CTkFont(size=14, weight="bold"))
+        self.label = ctk.CTkLabel(self, text="Ready", font=ctk.CTkFont(size=FONT_SIZES["label"], weight="bold"))
         self.label.pack(anchor="w", padx=14, pady=(12, 8))
 
         self.progress = ctk.CTkProgressBar(self, mode="indeterminate")

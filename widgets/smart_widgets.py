@@ -21,8 +21,10 @@ except Exception:
     GPUtil = None
 
 from config.widget_specs import widget_default_size, widget_spec
+from config.widget_style import widget_text_role
 from services.cleanup_service import CleanupService
 from widgets.base_mini_widget import BaseMiniWidget
+from widgets.responsive_layout import register_label, responsive_font_size, tk_font_weight
 from widgets.window_interactions import current_widget_geometry, is_control_widget, set_widget_cursor
 
 
@@ -46,7 +48,7 @@ class SmartWidgetBase(BaseMiniWidget):
         size = widget_default_size(widget_key, category)
         width = int(width if width is not None else size["width"])
         height = int(height if height is not None else size["height"])
-        self._theme_labels: list[tuple[ctk.CTkLabel, str, int, str]] = []
+        self._theme_labels: list[tuple[ctk.CTkLabel, str, str, str]] = []
         self._theme_panels: list[ctk.CTkFrame] = []
         self._theme_buttons: list[ctk.CTkButton] = []
         self._theme_progress: list[ctk.CTkProgressBar] = []
@@ -77,17 +79,31 @@ class SmartWidgetBase(BaseMiniWidget):
             self.current_theme_name = theme_name
         self._install_widget_chrome()
 
-    def label(self, parent, text: str, *, size: int = 12, weight: str = "normal", color: str = "text") -> ctk.CTkLabel:
+    def label(
+        self,
+        parent,
+        text: str,
+        *,
+        role: str = "body",
+        size_key: str | None = None,
+        weight: str | None = None,
+        color: str | None = None,
+    ) -> ctk.CTkLabel:
+        text_role = widget_text_role(role)
+        resolved_size_key = size_key or text_role.size_key
+        resolved_weight = weight or text_role.weight
+        resolved_color = color or text_role.color_key
         label = ctk.CTkLabel(
             parent,
             text=text,
-            font=ctk.CTkFont(size=size, weight=weight),
-            text_color=self.theme.get(color, self.theme["text"]),
+            font=ctk.CTkFont(size=responsive_font_size(self, resolved_size_key), weight=tk_font_weight(resolved_weight)),
+            text_color=self.theme.get(resolved_color, self.theme["text"]),
             wraplength=max(90, self._default_width - 36),
             justify="left",
             anchor="w",
         )
-        self._theme_labels.append((label, color, size, weight))
+        register_label(self, label, resolved_size_key, resolved_weight)
+        self._theme_labels.append((label, resolved_color, resolved_size_key, resolved_weight))
         self._bind_widget_chrome(label)
         return label
 
@@ -117,7 +133,7 @@ class SmartWidgetBase(BaseMiniWidget):
             parent,
             height=8,
             corner_radius=4,
-            progress_color=self.theme["accent"],
+            progress_color=self.widget_accent_color(),
             fg_color=self.theme["progress_track"],
         )
         progress.set(0)
@@ -135,7 +151,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self.compact_label = ctk.CTkLabel(
             self.topbar,
             text="",
-            font=ctk.CTkFont(size=11),
+            font=ctk.CTkFont(size=responsive_font_size(self, "tiny")),
             text_color=self.theme.get("muted", self.theme["text"]),
         )
         self.compact_label.pack(side="left", padx=(8, 0))
@@ -191,7 +207,7 @@ class SmartWidgetBase(BaseMiniWidget):
         self._set_widget_border(active=False)
 
     def _set_widget_border(self, *, active: bool) -> None:
-        color = self.theme["accent"] if active else self.theme.get("border", self.theme.get("progress_track", self.theme["button"]))
+        color = self.widget_accent_color() if active else self.theme.get("border", self.theme.get("progress_track", self.theme["button"]))
         try:
             self.container.configure(border_width=1, border_color=color)
         except Exception:
@@ -272,27 +288,21 @@ class SmartWidgetBase(BaseMiniWidget):
         self._latest_compact_text = clean_text
         self.compact_label.configure(text=clean_text if self._is_compact else "")
 
-    def _scaled_label_size(self, base_size: int) -> int:
-        try:
-            width_ratio = max(0.1, self.winfo_width() / max(1, self._default_width))
-            height_ratio = max(0.1, self.winfo_height() / max(1, self._default_height))
-            scale = max(0.78, min(1.12, min(width_ratio, height_ratio)))
-            return max(8, int(round(base_size * scale)))
-        except Exception:
-            return base_size
-
     def _update_responsive_layout(self) -> None:
         super()._update_responsive_layout()
         wraplength = max(80, self.winfo_width() - 36)
         try:
-            self.compact_label.configure(wraplength=max(80, self.winfo_width() - 140))
+            self.compact_label.configure(
+                wraplength=max(80, self.winfo_width() - 140),
+                font=ctk.CTkFont(size=responsive_font_size(self, "tiny")),
+            )
         except Exception:
             pass
-        for label, _color, size, weight in self._theme_labels:
+        for label, _color, size_key, weight in self._theme_labels:
             try:
                 label.configure(
                     wraplength=wraplength,
-                    font=ctk.CTkFont(size=self._scaled_label_size(size), weight=weight),
+                    font=ctk.CTkFont(size=responsive_font_size(self, size_key), weight=tk_font_weight(weight)),
                 )
             except Exception:
                 pass
@@ -343,7 +353,7 @@ class SmartWidgetBase(BaseMiniWidget):
             )
         for panel in self._theme_panels:
             panel.configure(fg_color=self.theme["panel"])
-        for label, color, _size, _weight in self._theme_labels:
+        for label, color, _size_key, _weight in self._theme_labels:
             label.configure(text_color=self.theme.get(color, self.theme["text"]))
         for button in self._theme_buttons:
             button.configure(
@@ -352,7 +362,7 @@ class SmartWidgetBase(BaseMiniWidget):
                 text_color=self.theme["text"],
             )
         for progress in self._theme_progress:
-            progress.configure(progress_color=self.theme["accent"], fg_color=self.theme["progress_track"])
+            progress.configure(progress_color=self.widget_accent_color(), fg_color=self.theme["progress_track"])
         for canvas in self._theme_canvases:
             canvas.configure(bg=self.theme["panel"])
 
@@ -400,22 +410,22 @@ class SmartWidgetBase(BaseMiniWidget):
         for index, value in enumerate(values):
             normalized = max(0.0, min(float(value) / maximum, 1.0))
             points.extend([index * step, height - (normalized * (height - 8)) - 4])
-        canvas.create_line(points, fill=self.theme["accent"], width=2, smooth=True)
+        canvas.create_line(points, fill=self.widget_accent_color(), width=2, smooth=True)
         canvas.create_line(0, height - 1, width, height - 1, fill=self.theme.get("border", self.theme["progress_track"]))
 
 
 class PCHealthWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "PC Health", "pc_health", x=x, y=y, theme_name=theme_name)
-        self.score_label = self.label(self.body, "0", size=42, weight="bold")
+        super().__init__(parent, None, "pc_health", x=x, y=y, theme_name=theme_name)
+        self.score_label = self.label(self.body, "0", role="hero")
         self.score_label.pack(anchor="w")
-        self.status_label = self.label(self.body, "Checking system health", size=13, color="muted")
+        self.status_label = self.label(self.body, "Checking system health", role="caption")
         self.status_label.pack(anchor="w", pady=(0, 10))
         self.health_progress = self.progress(self.body)
         self.health_progress.pack(fill="x", pady=(0, 12))
-        self.detail_label = self.label(self.body, "", size=12, color="muted")
+        self.detail_label = self.label(self.body, "", role="caption")
         self.detail_label.pack(anchor="w")
-        self.warning_label = self.label(self.body, "", size=11, color="muted")
+        self.warning_label = self.label(self.body, "", role="tiny")
         self.warning_label.pack(anchor="w", pady=(6, 0))
         self.apply_theme()
         self.update_stats()
@@ -475,13 +485,13 @@ class PCHealthWidget(SmartWidgetBase):
 
 class TopProcessesWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 430, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "Top Processes", "top_processes", x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, None, "top_processes", x=x, y=y, theme_name=theme_name)
         self.rows: list[ctk.CTkLabel] = []
         self._tracked_processes: dict[int, psutil.Process] = {}
-        self.summary_label = self.label(self.body, "Ranking by sampled CPU, then RAM", size=11, color="muted")
+        self.summary_label = self.label(self.body, "Ranking by sampled CPU, then RAM", role="tiny")
         self.summary_label.pack(anchor="w", pady=(0, 8))
         for _ in range(2):
-            row = self.label(self.body, "", size=12, color="text")
+            row = self.label(self.body, "", role="body")
             row.pack(anchor="w", fill="x", pady=2)
             self.rows.append(row)
         self.task_manager_button = self.button(self.body, "Open Task Manager", lambda: self.master.action_service.open_target("taskmgr"))
@@ -566,16 +576,16 @@ class TopProcessesWidget(SmartWidgetBase):
 
 class BatteryHealthWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 830, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "Battery", "battery_health", x=x, y=y, theme_name=theme_name)
-        self.percent_label = self.label(self.body, "N/A", size=38, weight="bold")
+        super().__init__(parent, None, "battery_health", x=x, y=y, theme_name=theme_name)
+        self.percent_label = self.label(self.body, "N/A", role="hero")
         self.percent_label.pack(anchor="w")
-        self.status_label = self.label(self.body, "Battery information unavailable", size=13, color="muted")
+        self.status_label = self.label(self.body, "Battery information unavailable", role="caption")
         self.status_label.pack(anchor="w", pady=(0, 10))
         self.battery_progress = self.progress(self.body)
         self.battery_progress.pack(fill="x", pady=(0, 12))
-        self.detail_label = self.label(self.body, "", size=12, color="muted")
+        self.detail_label = self.label(self.body, "", role="caption")
         self.detail_label.pack(anchor="w")
-        self.wear_label = self.label(self.body, "Wear: checking", size=12, color="muted")
+        self.wear_label = self.label(self.body, "Wear: checking", role="caption")
         self.wear_label.pack(anchor="w", pady=(4, 0))
         self._wear_checked = False
         self._battery_wear_text = "Wear: unavailable"
@@ -705,10 +715,10 @@ if ($full -and $design -and [double]$design -gt 0) {
 
 class StorageCleanupWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 360, theme_name: str | None = None):
-        super().__init__(parent, "Storage Cleanup", "storage_cleanup", x=x, y=y, theme_name=theme_name)
-        self.size_label = self.label(self.body, "Scan to estimate", size=28, weight="bold")
+        super().__init__(parent, None, "storage_cleanup", x=x, y=y, theme_name=theme_name)
+        self.size_label = self.label(self.body, "Scan to estimate", role="metric")
         self.size_label.pack(anchor="w")
-        self.detail_label = self.label(self.body, "Safe cleanup categories only", size=12, color="muted")
+        self.detail_label = self.label(self.body, "Safe cleanup categories only", role="caption")
         self.detail_label.pack(anchor="w", pady=(0, 12))
         actions = ctk.CTkFrame(self.body, fg_color="transparent")
         actions.pack(fill="x")
@@ -758,10 +768,10 @@ class StorageCleanupWidget(SmartWidgetBase):
 
 class DiskIOWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 460, y: int = 360, theme_name: str | None = None):
-        super().__init__(parent, "Disk I/O", "disk_io", x=x, y=y, theme_name=theme_name)
-        self.read_label = self.label(self.body, "Read 0 B/s", size=18, weight="bold")
+        super().__init__(parent, None, "disk_io", x=x, y=y, theme_name=theme_name)
+        self.read_label = self.label(self.body, "Read 0 B/s", role="title")
         self.read_label.pack(anchor="w")
-        self.write_label = self.label(self.body, "Write 0 B/s", size=18, weight="bold")
+        self.write_label = self.label(self.body, "Write 0 B/s", role="title")
         self.write_label.pack(anchor="w", pady=(2, 10))
         self.history = deque([0.0] * 40, maxlen=40)
         self.chart = self.canvas(self.body)
@@ -797,12 +807,12 @@ class DiskIOWidget(SmartWidgetBase):
 
 class NetworkQualityWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 820, y: int = 360, theme_name: str | None = None):
-        super().__init__(parent, "Network Quality", "network_quality", x=x, y=y, theme_name=theme_name)
-        self.speed_label = self.label(self.body, "0 B/s down | 0 B/s up", size=16, weight="bold")
+        super().__init__(parent, None, "network_quality", x=x, y=y, theme_name=theme_name)
+        self.speed_label = self.label(self.body, "0 B/s down | 0 B/s up", role="title")
         self.speed_label.pack(anchor="w")
-        self.ip_label = self.label(self.body, f"IP: {self._local_ip()}", size=12, color="muted")
+        self.ip_label = self.label(self.body, f"IP: {self._local_ip()}", role="caption")
         self.ip_label.pack(anchor="w", pady=(4, 8))
-        self.ping_label = self.label(self.body, "Ping: not tested", size=13, color="muted")
+        self.ping_label = self.label(self.body, "Ping: not tested", role="caption")
         self.ping_label.pack(anchor="w", pady=(0, 10))
         self.button(self.body, "Test Ping", self.test_ping).pack(fill="x")
         counters = psutil.net_io_counters()
@@ -863,10 +873,10 @@ class NetworkQualityWidget(SmartWidgetBase):
 
 class WindowsUpdateWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 80, y: int = 640, theme_name: str | None = None):
-        super().__init__(parent, "Windows Update", "windows_update", x=x, y=y, theme_name=theme_name)
-        self.status_label = self.label(self.body, "Refresh to check pending and installed updates", size=13, color="muted")
+        super().__init__(parent, None, "windows_update", x=x, y=y, theme_name=theme_name)
+        self.status_label = self.label(self.body, "Refresh to check pending and installed updates", role="caption")
         self.status_label.pack(anchor="w", pady=(0, 12))
-        self.update_label = self.label(self.body, "Last update: unknown", size=16, weight="bold")
+        self.update_label = self.label(self.body, "Last update: unknown", role="title")
         self.update_label.pack(anchor="w", pady=(0, 12))
         actions = ctk.CTkFrame(self.body, fg_color="transparent")
         actions.pack(fill="x")
@@ -941,13 +951,13 @@ try {
 
 class TemperatureWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 460, y: int = 640, theme_name: str | None = None):
-        super().__init__(parent, "Temperature", "temperature", x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, None, "temperature", x=x, y=y, theme_name=theme_name)
         self._fallback_temps: list[tuple[str, float]] = []
         self._fallback_probe_running = False
         self._fallback_last_probe = 0.0
-        self.temp_label = self.label(self.body, "N/A", size=34, weight="bold")
+        self.temp_label = self.label(self.body, "N/A", role="hero")
         self.temp_label.pack(anchor="w")
-        self.detail_label = self.label(self.body, "Sensor support varies by hardware", size=12, color="muted")
+        self.detail_label = self.label(self.body, "Sensor support varies by hardware", role="caption")
         self.detail_label.pack(anchor="w", pady=(0, 12))
         self.temp_progress = self.progress(self.body)
         self.temp_progress.pack(fill="x")
@@ -1076,7 +1086,7 @@ ForEach-Object {
 
 class QuickActionsWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 820, y: int = 640, theme_name: str | None = None):
-        super().__init__(parent, "Quick Actions", "quick_actions", x=x, y=y, theme_name=theme_name)
+        super().__init__(parent, None, "quick_actions", x=x, y=y, theme_name=theme_name)
         grid = ctk.CTkFrame(self.body, fg_color="transparent")
         grid.pack(fill="both", expand=True)
         grid.grid_columnconfigure((0, 1), weight=1)
@@ -1090,7 +1100,7 @@ class QuickActionsWidget(SmartWidgetBase):
         ]
         for index, (label, command) in enumerate(actions):
             self.button(grid, label, command).grid(row=index // 2, column=index % 2, padx=5, pady=5, sticky="ew")
-        self.status_label = self.label(self.body, "Ready", size=12, color="muted")
+        self.status_label = self.label(self.body, "Ready", role="caption")
         self.status_label.pack(anchor="w", pady=(8, 0))
         self.apply_theme()
         self.set_compact_text("6 shortcuts ready")
@@ -1129,14 +1139,14 @@ class QuickActionsWidget(SmartWidgetBase):
 
 class PerformanceTimelineWidget(SmartWidgetBase):
     def __init__(self, parent, x: int = 1200, y: int = 80, theme_name: str | None = None):
-        super().__init__(parent, "Performance Timeline", "performance_timeline", x=x, y=y, theme_name=theme_name)
-        self.metric_label = self.label(self.body, "CPU 0% | RAM 0%", size=16, weight="bold")
+        super().__init__(parent, None, "performance_timeline", x=x, y=y, theme_name=theme_name)
+        self.metric_label = self.label(self.body, "CPU 0% | RAM 0%", role="title")
         self.metric_label.pack(anchor="w", pady=(0, 8))
         self.cpu_history = deque([0.0] * 50, maxlen=50)
         self.ram_history = deque([0.0] * 50, maxlen=50)
         self.chart = self.canvas(self.body, height=130)
         self.chart.pack(fill="both", expand=True)
-        self.legend_label = self.label(self.body, "Blue: CPU | Gray: RAM", size=11, color="muted")
+        self.legend_label = self.label(self.body, "Blue: CPU | Gray: RAM", role="tiny")
         self.legend_label.pack(anchor="w", pady=(6, 0))
         self.apply_theme()
         self.update_stats()
@@ -1160,7 +1170,7 @@ class PerformanceTimelineWidget(SmartWidgetBase):
         height = max(canvas.winfo_height(), 80)
         canvas.create_rectangle(0, 0, width, height, fill=self.theme["panel"], outline="")
         self._draw_line(canvas, list(self.ram_history), width, height, self.theme.get("muted", "#94a3b8"))
-        self._draw_line(canvas, list(self.cpu_history), width, height, self.theme["accent"])
+        self._draw_line(canvas, list(self.cpu_history), width, height, self.widget_accent_color())
         canvas.create_line(0, height - 1, width, height - 1, fill=self.theme.get("border", self.theme["progress_track"]))
 
     @staticmethod

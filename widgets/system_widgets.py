@@ -49,7 +49,7 @@ class CPUWidget(BaseMiniWidget):
         if hasattr(self, 'freq_label'):
             self.freq_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
-            self.progress.configure(progress_color=self.theme["accent"], fg_color=self.theme["progress_track"])
+            self.progress.configure(progress_color=self.widget_accent_color(), fg_color=self.theme["progress_track"])
 
     def update_stats(self) -> None:
         if not self._running:
@@ -93,7 +93,7 @@ class RAMWidget(BaseMiniWidget):
         if hasattr(self, 'avail_label'):
             self.avail_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
-            self.progress.configure(progress_color=self.theme["accent"], fg_color=self.theme["progress_track"])
+            self.progress.configure(progress_color=self.widget_accent_color(), fg_color=self.theme["progress_track"])
 
     def update_stats(self) -> None:
         if not self._running:
@@ -133,7 +133,7 @@ class GPUWidget(BaseMiniWidget):
         if hasattr(self, 'note_label'):
             self.note_label.configure(text_color=self.theme["muted"])
         if hasattr(self, 'progress'):
-            self.progress.configure(progress_color=self.theme["accent"], fg_color=self.theme["progress_track"])
+            self.progress.configure(progress_color=self.widget_accent_color(), fg_color=self.theme["progress_track"])
 
     def update_stats(self) -> None:
         if not self._running:
@@ -372,7 +372,7 @@ class CalendarWidget(BaseMiniWidget):
                     height=1,
                     corner_radius=8,
                     font=ctk.CTkFont(size=self.get_responsive_font_size("body")),
-                    text_color="#ffffff",  # Force white text initially
+                    text_color=self.widget_on_accent_color(),
                     command=lambda w=week, d=day: self.day_clicked(w, d)
                 )
                 btn.grid(row=week + 1, column=day, padx=0, pady=0, sticky="nsew")
@@ -432,7 +432,10 @@ class CalendarWidget(BaseMiniWidget):
                 text="Tdy" if size_class == "large" else "Today",
                 width=44 if size_class == "large" else 60,
                 height=button_size,
-                font=ctk.CTkFont(size=10 if size_class == "large" else self.get_responsive_font_size("body"), weight="bold"),
+                font=ctk.CTkFont(
+                    size=self.get_responsive_font_size("tiny" if size_class == "large" else "body"),
+                    weight="bold",
+                ),
             )
             self.month_label.configure(wraplength=max(140, self.winfo_width() - 172))
         except Exception:
@@ -465,7 +468,7 @@ class CalendarWidget(BaseMiniWidget):
             self.summary_weekday_label.grid(row=0, column=1, sticky="sw", padx=(0, margin), pady=(margin, 0))
             self.summary_month_label.grid(row=1, column=1, sticky="nw", padx=(0, margin), pady=(0, 4))
             self.summary_event_label.grid(row=2, column=0, columnspan=2, sticky="ew", padx=margin, pady=(4, margin))
-            self.summary_day_label.configure(font=ctk.CTkFont(size=44, weight="bold"))
+            self.summary_day_label.configure(font=ctk.CTkFont(size=self.get_responsive_font_size("hero"), weight="bold"))
             self.summary_event_label.configure(wraplength=max(180, self.winfo_width() - (margin * 2)))
         else:
             self.summary_panel.grid_columnconfigure(0, weight=1)
@@ -473,7 +476,7 @@ class CalendarWidget(BaseMiniWidget):
             self.summary_day_label.grid(row=1, column=0, sticky="ew", padx=margin, pady=(0, 0))
             self.summary_month_label.grid(row=2, column=0, sticky="ew", padx=margin, pady=(0, 2))
             self.summary_event_label.grid(row=3, column=0, sticky="ew", padx=margin, pady=(2, margin))
-            self.summary_day_label.configure(font=ctk.CTkFont(size=42, weight="bold"))
+            self.summary_day_label.configure(font=ctk.CTkFont(size=self.get_responsive_font_size("hero"), weight="bold"))
             self.summary_event_label.configure(wraplength=max(120, self.winfo_width() - (margin * 2)))
 
     def _update_summary_labels(self) -> None:
@@ -505,9 +508,9 @@ class CalendarWidget(BaseMiniWidget):
             )
         if hasattr(self, 'today_btn'):
             self.today_btn.configure(
-                fg_color=self.theme["accent"],
+                fg_color=self.widget_accent_color(),
                 hover_color=self.theme.get("button_hover", "#343638"),
-                text_color=self.theme["text"]
+                text_color=self.widget_on_accent_color()
             )
         if hasattr(self, 'day_labels'):
             for label in self.day_labels:
@@ -562,16 +565,16 @@ class CalendarWidget(BaseMiniWidget):
                     # Apply styling based on conditions
                     if is_today:
                         btn.configure(
-                            fg_color=self.theme.get("accent", "#1f6aa5"),
+                            fg_color=self.widget_accent_color(),
                             hover_color=self.theme.get("button_hover", "#343638"),
-                            text_color="white",
+                            text_color=self.widget_on_accent_color(),
                             font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif is_weekend:
                         btn.configure(
                             fg_color=self.theme.get("panel", "#212121"),
                             hover_color=self.theme.get("button_hover", "#343638"),
-                            text_color=self.theme.get("accent", "#1f6aa5"),
+                            text_color=self.widget_accent_color(),
                             font=calendar_day_font(self, self.calendar_frame, bold=False)
                         )
                     else:
@@ -694,7 +697,7 @@ class ClockWidget(BaseMiniWidget):
         if hasattr(self, 'time_label'):
             self.time_label.configure(text_color=self.theme["text"])
         if hasattr(self, 'date_label'):
-            self.date_label.configure(text_color=self.theme["accent"])
+            self.date_label.configure(text_color=self.widget_accent_color())
         if hasattr(self, 'day_label'):
             self.day_label.configure(text_color=self.theme["muted"])
 

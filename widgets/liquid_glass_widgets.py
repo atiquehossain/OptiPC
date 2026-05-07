@@ -690,7 +690,10 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                 text="Tdy" if size_class == "large" else "Today",
                 width=44 if size_class == "large" else 60,
                 height=button_size,
-                font=ctk.CTkFont(size=10 if size_class == "large" else self.get_responsive_font_size("body"), weight="bold"),
+                font=ctk.CTkFont(
+                    size=self.get_responsive_font_size("tiny" if size_class == "large" else "body"),
+                    weight="bold",
+                ),
             )
             self.month_label.configure(wraplength=max(140, self.winfo_width() - 172))
         except Exception:
@@ -723,7 +726,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             self.summary_weekday_label.grid(row=0, column=1, sticky="sw", padx=(0, margin), pady=(margin, 0))
             self.summary_month_label.grid(row=1, column=1, sticky="nw", padx=(0, margin), pady=(0, 4))
             self.summary_event_label.grid(row=2, column=0, columnspan=2, sticky="ew", padx=margin, pady=(4, margin))
-            self.summary_day_label.configure(font=ctk.CTkFont(size=44, weight="bold"))
+            self.summary_day_label.configure(font=ctk.CTkFont(size=self.get_responsive_font_size("hero"), weight="bold"))
             self.summary_event_label.configure(wraplength=max(180, self.winfo_width() - (margin * 2)))
         else:
             self.summary_panel.grid_columnconfigure(0, weight=1)
@@ -731,7 +734,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             self.summary_day_label.grid(row=1, column=0, sticky="ew", padx=margin, pady=(0, 0))
             self.summary_month_label.grid(row=2, column=0, sticky="ew", padx=margin, pady=(0, 2))
             self.summary_event_label.grid(row=3, column=0, sticky="ew", padx=margin, pady=(2, margin))
-            self.summary_day_label.configure(font=ctk.CTkFont(size=42, weight="bold"))
+            self.summary_day_label.configure(font=ctk.CTkFont(size=self.get_responsive_font_size("hero"), weight="bold"))
             self.summary_event_label.configure(wraplength=max(120, self.winfo_width() - (margin * 2)))
 
     def _update_summary_labels(self) -> None:
@@ -767,7 +770,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             self.today_btn.configure(
                 fg_color=self.widget_accent_color(),
                 hover_color=self.theme["button_hover"],
-                text_color="white"
+                text_color=self.widget_on_accent_color()
             )
         
         # Update day labels
@@ -847,7 +850,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                         btn.configure(
                             fg_color=self.widget_accent_color(),
                             hover_color=self.theme["button_hover"],
-                            text_color="white",
+                            text_color=self.widget_on_accent_color(),
                             font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif is_weekend:

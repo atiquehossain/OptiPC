@@ -184,7 +184,7 @@ class ModernMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("title"), weight="bold"),
             command=self.on_close_button_click,
         )
         self.close_button.pack(side="right")
@@ -347,7 +347,7 @@ class ModernMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel
     def create_apple_progress_bar(self, parent, width: int = 200, accent_color: str = None) -> ctk.CTkProgressBar:
         """Create an Modern-style progress bar with rounded corners."""
         if accent_color is None:
-            accent_color = self.theme["accent"]
+            accent_color = self.widget_accent_color()
             
         progress = ctk.CTkProgressBar(
             parent,

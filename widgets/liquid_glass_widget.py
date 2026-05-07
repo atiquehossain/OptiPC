@@ -231,7 +231,7 @@ class LiquidGlassWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkTopleve
         self.title_label = ctk.CTkLabel(
             self.topbar,
             text=title,
-            font=ctk.CTkFont(size=14, weight="bold"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("label"), weight="bold"),
             text_color=self.theme["muted"]
         )
         self.title_label.pack(side="left")
@@ -246,7 +246,7 @@ class LiquidGlassWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkTopleve
             fg_color=self.theme["button"],
             hover_color=self.theme["button_hover"],
             text_color=self.theme["text"],
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=ctk.CTkFont(size=self.get_responsive_font_size("title"), weight="bold"),
             command=self.on_close_button_click,
         )
         self.close_button.pack(side="right")
@@ -417,7 +417,7 @@ class LiquidGlassWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkTopleve
     def create_glass_progress_bar(self, parent, width: int = 200, accent_color: str = None) -> ctk.CTkProgressBar:
         """Create a glass-style progress bar."""
         if accent_color is None:
-            accent_color = self.theme["accent"]
+            accent_color = self.widget_accent_color()
             
         progress = ctk.CTkProgressBar(
             parent,

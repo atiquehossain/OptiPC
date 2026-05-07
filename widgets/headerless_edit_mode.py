@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
+from widgets.responsive_layout import responsive_font_size
 from widgets.window_interactions import control_widget_at_event, current_widget_geometry
 
 
@@ -59,7 +60,7 @@ class HeaderlessEditModeMixin:
                 fg_color=theme.get("button", "#3a3a3a"),
                 hover_color=theme.get("button_hover", "#4a4a4a"),
                 text_color=theme.get("text", "#ffffff"),
-                font=ctk.CTkFont(size=18, weight="bold"),
+                font=ctk.CTkFont(size=responsive_font_size(self, "title"), weight="bold"),
             )
         except Exception:
             pass

@@ -627,7 +627,10 @@ class ModernCalendarWidget(ModernMiniWidget):
                 text="T" if very_compact else "Tdy" if compact else "Today",
                 width=32 if very_compact else 44 if compact else 70,
                 height=button_size,
-                font=ctk.CTkFont(size=9 if very_compact else 10 if compact else self.get_responsive_font_size("body"), weight="bold"),
+                font=ctk.CTkFont(
+                    size=self.get_responsive_font_size("tiny" if compact else "body"),
+                    weight="bold",
+                ),
             )
             self.month_label.configure(wraplength=max(70, self.winfo_width() - (126 if very_compact else 168)))
         except Exception:
@@ -656,7 +659,7 @@ class ModernCalendarWidget(ModernMiniWidget):
             self.today_btn.configure(
                 fg_color=self.widget_accent_color(),
                 hover_color=self.theme["button_hover"],
-                text_color="white"
+                text_color=self.widget_on_accent_color()
             )
         
         # Update day labels
@@ -708,7 +711,7 @@ class ModernCalendarWidget(ModernMiniWidget):
                         btn.configure(
                             fg_color=self.widget_accent_color(),
                             hover_color=self.theme["button_hover"],
-                            text_color="white",
+                            text_color=self.widget_on_accent_color(),
                             font=calendar_day_font(self, self.calendar_frame, bold=True)
                         )
                     elif is_weekend:
