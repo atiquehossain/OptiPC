@@ -384,6 +384,7 @@ def test_calendar_size_classes():
     try:
         from widgets.calendar_responsive import (
             CALENDAR_WEEKDAY_LABELS,
+            calendar_canvas_nav_action_at_point,
             calendar_month_dates,
             calendar_size_class,
             calendar_uses_month_grid,
@@ -397,6 +398,17 @@ def test_calendar_size_classes():
 
             def geometry(self):
                 return f"{self.width}x{self.height}+0+0"
+
+            def winfo_width(self):
+                return self.width
+
+            def winfo_height(self):
+                return self.height
+
+        class FakeCanvas:
+            def __init__(self, width, height):
+                self.width = width
+                self.height = height
 
             def winfo_width(self):
                 return self.width
@@ -432,6 +444,14 @@ def test_calendar_size_classes():
             return False
         if len(may_2026) != 6 or any(len(week) != 7 for week in may_2026):
             print("FAIL: Calendar does not return a fixed 6x7 grid")
+            return False
+        fake_widget = FakeCalendar(170, 170)
+        fake_canvas = FakeCanvas(170, 170)
+        if calendar_canvas_nav_action_at_point(fake_canvas, fake_widget, 10, 14) != "previous":
+            print("FAIL: Calendar previous-month hit zone is missing")
+            return False
+        if calendar_canvas_nav_action_at_point(fake_canvas, fake_widget, 160, 14) != "next":
+            print("FAIL: Calendar next-month hit zone is missing")
             return False
 
         print("OK: Calendar size classes switch content modes correctly")

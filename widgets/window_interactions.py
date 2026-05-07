@@ -370,7 +370,9 @@ def bind_drag_target(window, target) -> None:
         if getattr(window, "_edit_mode", False):
             return "break"
         try:
-            window._settle_widget_position()
+            save_now = getattr(window, "_save_geometry_now", None)
+            if callable(save_now):
+                save_now()
         except Exception:
             pass
         return "break"

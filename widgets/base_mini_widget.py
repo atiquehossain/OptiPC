@@ -598,7 +598,6 @@ class BaseMiniWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkToplevel):
     def on_mouse_up(self, event) -> None:
         self._is_resizing = False
         self._resize_dir = None
-        self._settle_widget_position()
         self._save_geometry_now()
         
         # Stop event propagation to prevent conflicts

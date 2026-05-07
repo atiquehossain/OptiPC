@@ -23,6 +23,7 @@ from widgets.calendar_responsive import (
     CALENDAR_WEEKDAY_TEXT,
     CALENDAR_WEEKDAY_LABELS,
     calendar_canvas_date_at_point,
+    calendar_canvas_nav_action_at_point,
     calendar_day_font,
     calendar_month_dates,
     install_calendar_canvas,
@@ -519,7 +520,7 @@ class CalendarWidget(BaseMiniWidget):
         if hasattr(self, 'summary_panel'):
             self.summary_panel.configure(fg_color=self.theme.get("panel", "#212121"))
         if hasattr(self, 'calendar_canvas'):
-            self.calendar_canvas.configure(bg=CALENDAR_SURFACE)
+            redraw_calendar_canvas(self, self.calendar_canvas)
         for label_name, color_key in (
             ("summary_weekday_label", "muted"),
             ("summary_day_label", "text"),
@@ -578,6 +579,18 @@ class CalendarWidget(BaseMiniWidget):
         self.update_time()
 
     def _on_calendar_canvas_release(self, event) -> None:
+        nav_action = calendar_canvas_nav_action_at_point(
+            self.calendar_canvas,
+            self,
+            int(event.x),
+            int(event.y),
+        )
+        if nav_action == "previous":
+            self.previous_month()
+            return
+        if nav_action == "next":
+            self.next_month()
+            return
         clicked_date = calendar_canvas_date_at_point(
             self.calendar_canvas,
             self,

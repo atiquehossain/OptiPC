@@ -213,6 +213,31 @@ def test_resize_release_saves_geometry():
     return True
 
 
+def test_manual_release_does_not_auto_settle():
+    """Manual drag/resize release should not snap widgets away from the user's chosen spot."""
+    import inspect
+
+    from widgets.base_mini_widget import BaseMiniWidget
+    from widgets.liquid_glass_widget import LiquidGlassWidget
+    from widgets.modern_widget_base import ModernMiniWidget
+    from widgets.window_interactions import bind_drag_target
+
+    for cls in (BaseMiniWidget, ModernMiniWidget, LiquidGlassWidget):
+        source = inspect.getsource(cls.on_mouse_up)
+        if "_settle_widget_position" in source:
+            print(f"FAIL: {cls.__name__}.on_mouse_up still auto-settles manual resize")
+            return False
+
+    drag_source = inspect.getsource(bind_drag_target)
+    release_block = drag_source[drag_source.find("def on_release") :]
+    if "_settle_widget_position" in release_block:
+        print("FAIL: Shared drag release still auto-settles manual drag")
+        return False
+
+    print("OK: Manual drag/resize release preserves user placement")
+    return True
+
+
 def test_northeast_resize_moves_top_edge():
     """Top-right resize should change the top edge, not resize downward."""
     from widgets.base_mini_widget import BaseMiniWidget
@@ -269,6 +294,7 @@ if __name__ == "__main__":
         and test_scaled_pointer_coordinates_use_geometry_units()
         and test_drag_target_binding_is_idempotent()
         and test_resize_release_saves_geometry()
+        and test_manual_release_does_not_auto_settle()
         and test_northeast_resize_moves_top_edge()
     )
     sys.exit(0 if success else 1)

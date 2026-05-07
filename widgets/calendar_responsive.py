@@ -8,7 +8,7 @@ from typing import Any
 import customtkinter as ctk
 
 from config.constants import WIDGET_CONTENT_MARGIN
-from widgets.window_interactions import current_widget_geometry
+from widgets.window_interactions import apply_cursor, current_widget_geometry, start_resize, widget_point
 
 CALENDAR_WEEKDAY_LABELS = ("M", "T", "W", "T", "F", "S", "S")
 CALENDAR_SURFACE = "#2c2828"
@@ -169,15 +169,19 @@ def _calendar_canvas_metrics(canvas: Any, widget) -> dict[str, float]:
 
     left = max(8, int(width * 0.055))
     right = max(8, int(width * 0.055))
-    top = max(10, int(height * 0.075))
+    top = max(8, int(height * 0.06))
     bottom = max(8, int(height * 0.05))
     usable_width = max(70, width - left - right)
     cell_width = usable_width / 7
-    header_y = top
-    grid_top = header_y + max(20, int(height * 0.155))
+    nav_height = max(22, min(36, int(height * 0.16)))
+    nav_y = top + nav_height / 2
+    header_y = top + nav_height + max(12, int(height * 0.055))
+    grid_top = header_y + max(16, int(height * 0.105))
     row_height = max(15, (height - grid_top - bottom) / 6)
     header_size = max(8, min(12, int(row_height * 0.78)))
     day_size = max(9, min(13, int(row_height * 0.78)))
+    nav_size = max(9, min(14, int(nav_height * 0.5)))
+    nav_button_radius = max(10, min(17, nav_height * 0.46))
 
     return {
         "width": float(width),
@@ -187,11 +191,15 @@ def _calendar_canvas_metrics(canvas: Any, widget) -> dict[str, float]:
         "top": float(top),
         "bottom": float(bottom),
         "cell_width": float(cell_width),
+        "nav_height": float(nav_height),
+        "nav_y": float(nav_y),
+        "nav_button_radius": float(nav_button_radius),
         "header_y": float(header_y),
         "grid_top": float(grid_top),
         "row_height": float(row_height),
         "header_size": float(header_size),
         "day_size": float(day_size),
+        "nav_size": float(nav_size),
     }
 
 
@@ -205,19 +213,91 @@ def install_calendar_canvas(widget, frame, click_handler=None):
         relief="flat",
         takefocus=0,
     )
-    try:
-        widget._bind_drag_target(canvas)
-    except Exception:
-        pass
     canvas.grid(row=0, column=0, rowspan=7, columnspan=7, padx=0, pady=0, sticky="nsew")
     canvas.bind("<Configure>", lambda _event: redraw_calendar_canvas(widget, canvas), add="+")
-    if click_handler is not None:
-        canvas.bind("<ButtonRelease-1>", click_handler, add="+")
+    _bind_calendar_canvas_interactions(widget, canvas, click_handler)
     try:
         canvas.lift()
     except Exception:
         pass
     return canvas
+
+
+def _bind_calendar_canvas_interactions(widget, canvas, click_handler=None) -> None:
+    def on_motion(event):
+        if getattr(widget, "_is_resizing", False):
+            return None
+        try:
+            x, y = widget_point(widget, event)
+            apply_cursor(widget, event.widget, widget.get_resize_direction(x, y) or "move")
+        except Exception:
+            pass
+        return None
+
+    def on_leave(event):
+        if not getattr(widget, "_is_resizing", False):
+            apply_cursor(widget, event.widget, None)
+        return None
+
+    def on_press(event):
+        try:
+            x, y = widget_point(widget, event)
+            direction = widget.get_resize_direction(x, y)
+        except Exception:
+            direction = None
+        widget._calendar_canvas_press_root = (int(event.x_root), int(event.y_root))
+        widget._calendar_canvas_dragged = False
+        if direction:
+            widget._calendar_canvas_mode = "resize"
+            return start_resize(widget, event, direction)
+        edit_press = getattr(widget, "_on_edit_press", None)
+        if callable(edit_press):
+            edit_press(event)
+        widget._calendar_canvas_mode = "drag"
+        widget.start_drag(event)
+        widget._is_dragging_widget = True
+        return "break"
+
+    def on_drag(event):
+        mode = getattr(widget, "_calendar_canvas_mode", "")
+        if mode == "resize" or getattr(widget, "_is_resizing", False):
+            return widget.on_mouse_drag(event)
+        edit_drag = getattr(widget, "_on_edit_drag", None)
+        if callable(edit_drag):
+            edit_drag(event)
+        start_root = getattr(widget, "_calendar_canvas_press_root", None)
+        if start_root is not None:
+            dx = abs(int(event.x_root) - int(start_root[0]))
+            dy = abs(int(event.y_root) - int(start_root[1]))
+            if dx > 3 or dy > 3:
+                widget._calendar_canvas_dragged = True
+        widget.do_drag(event)
+        widget._is_dragging_widget = True
+        return "break"
+
+    def on_release(event):
+        mode = getattr(widget, "_calendar_canvas_mode", "")
+        widget._calendar_canvas_mode = ""
+        if mode == "resize" or getattr(widget, "_is_resizing", False):
+            return widget.on_mouse_up(event)
+        edit_release = getattr(widget, "_on_edit_release", None)
+        if callable(edit_release):
+            edit_release(event)
+        widget._is_dragging_widget = False
+        if getattr(widget, "_calendar_canvas_dragged", False):
+            save_now = getattr(widget, "_save_geometry_now", None)
+            if callable(save_now):
+                save_now()
+            return "break"
+        if callable(click_handler):
+            click_handler(event)
+        return "break"
+
+    canvas.bind("<Motion>", on_motion, add="+")
+    canvas.bind("<Leave>", on_leave, add="+")
+    canvas.bind("<ButtonPress-1>", on_press, add="+")
+    canvas.bind("<B1-Motion>", on_drag, add="+")
+    canvas.bind("<ButtonRelease-1>", on_release, add="+")
 
 
 def redraw_calendar_canvas(widget, canvas=None) -> None:
@@ -248,6 +328,30 @@ def calendar_canvas_date_at_point(canvas: Any, widget, year: int, month: int, x:
     return calendar_month_dates(year, month)[row][column]
 
 
+def calendar_canvas_nav_action_at_point(canvas: Any, widget, x: int, y: int) -> str | None:
+    metrics = _calendar_canvas_metrics(canvas, widget)
+    top = metrics["top"]
+    nav_height = metrics["nav_height"]
+    if y < top or y > top + nav_height:
+        return None
+    radius = metrics["nav_button_radius"]
+    if x <= metrics["left"] + radius * 2.4:
+        return "previous"
+    if x >= metrics["width"] - metrics["right"] - radius * 2.4:
+        return "next"
+    return None
+
+
+def _create_round_rect(canvas: Any, left: float, top: float, right: float, bottom: float, radius: float, **kwargs) -> None:
+    radius = max(1, min(float(radius), (right - left) / 2, (bottom - top) / 2))
+    canvas.create_rectangle(left + radius, top, right - radius, bottom, **kwargs)
+    canvas.create_rectangle(left, top + radius, right, bottom - radius, **kwargs)
+    canvas.create_oval(left, top, left + radius * 2, top + radius * 2, **kwargs)
+    canvas.create_oval(right - radius * 2, top, right, top + radius * 2, **kwargs)
+    canvas.create_oval(left, bottom - radius * 2, left + radius * 2, bottom, **kwargs)
+    canvas.create_oval(right - radius * 2, bottom - radius * 2, right, bottom, **kwargs)
+
+
 def draw_calendar_canvas(canvas: Any, widget, year: int, month: int, current_day: date) -> None:
     weeks = calendar_month_dates(year, month)
     metrics = _calendar_canvas_metrics(canvas, widget)
@@ -255,15 +359,52 @@ def draw_calendar_canvas(canvas: Any, widget, year: int, month: int, current_day
     canvas.delete("all")
     canvas.configure(bg=CALENDAR_SURFACE, highlightthickness=0, bd=0)
 
+    width = metrics["width"]
+    height = metrics["height"]
     left = metrics["left"]
+    right = metrics["right"]
     cell_width = metrics["cell_width"]
+    nav_y = metrics["nav_y"]
+    nav_radius = metrics["nav_button_radius"]
     header_y = metrics["header_y"]
     grid_top = metrics["grid_top"]
     row_height = metrics["row_height"]
+    nav_size = int(metrics["nav_size"])
     header_size = int(metrics["header_size"])
     day_size = int(metrics["day_size"])
+    canvas.create_rectangle(0, 0, width, height, fill=CALENDAR_SURFACE, outline=CALENDAR_SURFACE)
+
+    nav_font = ("Segoe UI", nav_size, "bold")
     header_font = ("Segoe UI", header_size, "bold")
     day_font = ("Segoe UI", day_size, "bold")
+    month_font = ("Segoe UI", max(9, min(13, nav_size)), "bold")
+    nav_button_fill = "#3b3737"
+    month_name = calendar.month_name[int(month)]
+    prev_x = left + nav_radius
+    next_x = width - right - nav_radius
+    _create_round_rect(
+        canvas,
+        prev_x - nav_radius,
+        nav_y - nav_radius,
+        prev_x + nav_radius,
+        nav_y + nav_radius,
+        nav_radius,
+        fill=nav_button_fill,
+        outline=nav_button_fill,
+    )
+    _create_round_rect(
+        canvas,
+        next_x - nav_radius,
+        nav_y - nav_radius,
+        next_x + nav_radius,
+        nav_y + nav_radius,
+        nav_radius,
+        fill=nav_button_fill,
+        outline=nav_button_fill,
+    )
+    canvas.create_text(prev_x, nav_y - 1, text="<", fill=CALENDAR_TEXT, font=nav_font, anchor="center")
+    canvas.create_text(next_x, nav_y - 1, text=">", fill=CALENDAR_TEXT, font=nav_font, anchor="center")
+    canvas.create_text(width / 2, nav_y - 1, text=f"{month_name} {year}", fill=CALENDAR_TEXT, font=month_font, anchor="center")
 
     for col, label in enumerate(CALENDAR_WEEKDAY_LABELS):
         x = left + (col + 0.5) * cell_width
