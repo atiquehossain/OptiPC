@@ -20,7 +20,7 @@ try:
 except Exception:
     GPUtil = None
 
-from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH
+from config.constants import DEFAULT_WIDGET_HEIGHT, DEFAULT_WIDGET_WIDTH, WIDGET_SIZE_CATEGORY_BY_KEY, WIDGET_SIZES
 from services.cleanup_service import CleanupService
 from widgets.base_mini_widget import BaseMiniWidget
 from widgets.window_interactions import current_widget_geometry, is_control_widget, set_widget_cursor
@@ -33,12 +33,17 @@ class SmartWidgetBase(BaseMiniWidget):
         title: str,
         widget_key: str,
         *,
-        width: int = DEFAULT_WIDGET_WIDTH,
-        height: int = DEFAULT_WIDGET_HEIGHT,
+        width: int | None = None,
+        height: int | None = None,
         x: int = 80,
         y: int = 80,
         theme_name: str | None = None,
+        size_category: str | None = None,
     ) -> None:
+        category = size_category or WIDGET_SIZE_CATEGORY_BY_KEY.get(widget_key, "default")
+        size = WIDGET_SIZES.get(category, WIDGET_SIZES["default"])
+        width = int(width if width is not None else size.get("width", DEFAULT_WIDGET_WIDTH))
+        height = int(height if height is not None else size.get("height", DEFAULT_WIDGET_HEIGHT))
         self._theme_labels: list[tuple[ctk.CTkLabel, str, int, str]] = []
         self._theme_panels: list[ctk.CTkFrame] = []
         self._theme_buttons: list[ctk.CTkButton] = []
@@ -56,7 +61,16 @@ class SmartWidgetBase(BaseMiniWidget):
         self.MIN_HEIGHT = max(150, int(height * 0.84))
         self.MAX_WIDTH = max(width + 120, int(width * 1.45))
         self.MAX_HEIGHT = max(height + 90, int(height * 1.35))
-        super().__init__(parent, title, width=width, height=height, x=x, y=y, widget_key=widget_key)
+        super().__init__(
+            parent,
+            title,
+            width=width,
+            height=height,
+            x=x,
+            y=y,
+            widget_key=widget_key,
+            size_category=category,
+        )
         if theme_name:
             self.current_theme_name = theme_name
         self._install_widget_chrome()

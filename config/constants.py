@@ -7,61 +7,61 @@ APP_VERSION = "1.0"
 # Typography
 FONT_SIZES = {
     "small": 11,
-    "body": 13,
+    "body": 17,
     "label": 14,
-    "title": 16,
+    "title": 17,
     "card_title": 20,
     "page_title": 26,
-    "metric": 28,
-    "hero": 30,
+    "metric": 30,
+    "hero": 34,
 }
 
-# Responsive Widget Font Sizes (scale with widget size)
+# Responsive Widget Font Sizes (logical points, scaled by widget size)
 RESPONSIVE_FONT_SIZES = {
     "default": {
-        "tiny": 9,
-        "small": 11,
-        "body": 12,
+        "tiny": 11,
+        "small": 13,
+        "body": 17,
         "label": 13,
-        "title": 15,
-        "metric": 18,
-        "hero": 20,
+        "title": 17,
+        "metric": 28,
+        "hero": 34,
     },
     "small": {
-        "tiny": 9,
-        "small": 11,
-        "body": 12,
+        "tiny": 11,
+        "small": 13,
+        "body": 17,
         "label": 13,
-        "title": 15,
-        "metric": 18,
-        "hero": 20,
+        "title": 17,
+        "metric": 28,
+        "hero": 34,
     },
     "medium": {
-        "tiny": 10,
-        "small": 12,
-        "body": 13,
-        "label": 14,
-        "title": 16,
-        "metric": 22,
-        "hero": 24,
+        "tiny": 11,
+        "small": 13,
+        "body": 17,
+        "label": 15,
+        "title": 17,
+        "metric": 30,
+        "hero": 34,
     },
     "large": {
         "tiny": 11,
         "small": 13,
-        "body": 14,
+        "body": 17,
         "label": 15,
-        "title": 18,
-        "metric": 26,
-        "hero": 28,
+        "title": 17,
+        "metric": 30,
+        "hero": 34,
     },
     "extra_large": {
         "tiny": 12,
-        "small": 14,
-        "body": 15,
+        "small": 13,
+        "body": 17,
         "label": 16,
         "title": 20,
-        "metric": 30,
-        "hero": 32,
+        "metric": 34,
+        "hero": 36,
     },
 }
 
@@ -323,15 +323,24 @@ WIDGET_THEMES = {
 }
 
 # Standard Widget Dimensions
+WIDGET_LOGICAL_POINT_SCALE = 1.0
+WIDGET_CONTENT_MARGIN = 16
+WIDGET_GRID_GAP = 16
+
 DEFAULT_WIDGET_WIDTH = 170
 DEFAULT_WIDGET_HEIGHT = 170
 
+WIDGET_SIZE_CLASSES = {
+    "small": {"width": 170, "height": 170, "grid_columns": 2, "grid_rows": 2},
+    "medium": {"width": 364, "height": 170, "grid_columns": 4, "grid_rows": 2},
+    "large": {"width": 364, "height": 376, "grid_columns": 4, "grid_rows": 4},
+    "extra_large": {"width": 745, "height": 376, "grid_columns": 8, "grid_rows": 4},
+    "default": {"width": DEFAULT_WIDGET_WIDTH, "height": DEFAULT_WIDGET_HEIGHT, "grid_columns": 2, "grid_rows": 2},
+}
+
 WIDGET_SIZES = {
-    "small": {"width": 170, "height": 170},
-    "medium": {"width": 368, "height": 170},
-    "large": {"width": 364, "height": 376},
-    "extra_large": {"width": 745, "height": 376},
-    "default": {"width": DEFAULT_WIDGET_WIDTH, "height": DEFAULT_WIDGET_HEIGHT},
+    key: {"width": value["width"], "height": value["height"]}
+    for key, value in WIDGET_SIZE_CLASSES.items()
 }
 
 WIDGET_SIZE_CATEGORY_BY_KEY = {
@@ -340,16 +349,28 @@ WIDGET_SIZE_CATEGORY_BY_KEY = {
     "gpu": "small",
     "clock": "small",
     "uptime": "small",
+    "battery_health": "small",
+    "pc_health": "small",
+    "temperature": "small",
     "network_speed": "medium",
+    "storage_cleanup": "medium",
+    "disk_io": "medium",
+    "network_quality": "medium",
+    "windows_update": "medium",
     "storage": "large",
     "partitions": "large",
+    "top_processes": "large",
+    "quick_actions": "large",
+    "performance_timeline": "large",
     "calendar": "extra_large",
 }
 
-WIDGET_DEFAULT_SIZE_VERSION = 4
+WIDGET_DEFAULT_SIZE_VERSION = 5
 LEGACY_WIDGET_DEFAULT_SIZES = {
     (200, 200),
+    (170, 170),
     (280, 210),
+    (368, 170),
     (320, 220),
     (320, 240),
     (400, 220),
@@ -370,9 +391,9 @@ LEGACY_WIDGET_DEFAULT_SIZES = {
 # saved accidental drag turn them into oversized empty panels.
 WIDGET_SIZE_LIMITS = {
     "small": {"min_width": 150, "min_height": 150, "max_width": 420, "max_height": 360},
-    "medium": {"min_width": 220, "min_height": 150, "max_width": 620, "max_height": 380},
-    "large": {"min_width": 260, "min_height": 240, "max_width": 760, "max_height": 560},
-    "extra_large": {"min_width": 320, "min_height": 260, "max_width": 900, "max_height": 680},
+    "medium": {"min_width": 150, "min_height": 150, "max_width": 620, "max_height": 380},
+    "large": {"min_width": 150, "min_height": 150, "max_width": 760, "max_height": 560},
+    "extra_large": {"min_width": 150, "min_height": 150, "max_width": 900, "max_height": 680},
     "default": {"min_width": 150, "min_height": 150, "max_width": 420, "max_height": 360},
 }
 

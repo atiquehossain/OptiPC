@@ -7,8 +7,11 @@ import customtkinter as ctk
 from widgets.calendar_responsive import (
     apply_calendar_footer_visibility,
     apply_calendar_grid_layout,
+    calendar_size_class,
+    calendar_uses_month_grid,
     calendar_day_font,
     install_calendar_grid,
+    widget_content_margin,
 )
 from widgets.liquid_glass_widget import LiquidGlassWidget
 from config.constants import FONT_SIZES
@@ -553,7 +556,43 @@ class LiquidCalendarWidget(LiquidGlassWidget):
             height=28
         )
         self.today_btn.pack(side="right", padx=(self.SPACING_TIGHT, 0))
-        
+
+        # Compact date/agenda surface used by small and medium size classes.
+        self.summary_panel = self.create_glass_panel(
+            self.body,
+            corner_radius=self.CORNER_RADIUS_MEDIUM
+        )
+        self.summary_panel.grid_columnconfigure(0, weight=1)
+        self.summary_panel.grid_columnconfigure(1, weight=1)
+        self.summary_weekday_label = self.create_glass_label(
+            self.summary_panel,
+            "",
+            size_key="small",
+            weight="medium",
+            color_key="muted"
+        )
+        self.summary_day_label = self.create_glass_label(
+            self.summary_panel,
+            "",
+            size_key="hero",
+            weight="bold",
+            color_key="text"
+        )
+        self.summary_month_label = self.create_glass_label(
+            self.summary_panel,
+            "",
+            size_key="title",
+            weight="bold",
+            color_key="text"
+        )
+        self.summary_event_label = self.create_glass_label(
+            self.summary_panel,
+            "",
+            size_key="body",
+            weight="medium",
+            color_key="muted"
+        )
+         
         # Calendar grid frame with glass styling
         self.calendar_frame = self.create_glass_panel(
             self.body,
@@ -611,31 +650,101 @@ class LiquidCalendarWidget(LiquidGlassWidget):
     def _layout_calendar(self) -> None:
         if not hasattr(self, "calendar_frame"):
             return
+        size_class = calendar_size_class(self)
+        margin = widget_content_margin(self)
+        uses_grid = calendar_uses_month_grid(self)
         try:
-            compact = self.winfo_height() < 300
-            very_compact = compact and (self.winfo_height() < 240 or self.winfo_width() < 300)
-            nav_pad_y = (2, 2) if very_compact else (4, 3) if compact else (self.SPACING_NORMAL, self.SPACING_TIGHT)
-            grid_pad_y = (2, 4) if very_compact else (3, 6) if compact else (self.SPACING_TIGHT, self.SPACING_NORMAL)
-            self.nav_frame.pack_configure(pady=nav_pad_y)
-            self.calendar_frame.pack_configure(pady=grid_pad_y)
-            button_size = 22 if very_compact else 24 if compact else 28
+            if uses_grid:
+                if self.summary_panel.winfo_manager():
+                    self.summary_panel.pack_forget()
+                if not self.nav_frame.winfo_manager():
+                    self.nav_frame.pack(fill="x", pady=(self.SPACING_NORMAL, self.SPACING_TIGHT))
+                if not self.calendar_frame.winfo_manager():
+                    self.calendar_frame.pack(fill="both", expand=True, pady=(self.SPACING_TIGHT, self.SPACING_NORMAL))
+                compact = size_class == "large"
+                nav_pad_y = (4, 3) if compact else (self.SPACING_NORMAL, self.SPACING_TIGHT)
+                grid_pad_y = (4, 8) if compact else (self.SPACING_TIGHT, self.SPACING_NORMAL)
+                self.nav_frame.pack_configure(pady=nav_pad_y)
+                self.calendar_frame.pack_configure(pady=grid_pad_y)
+            else:
+                if self.nav_frame.winfo_manager():
+                    self.nav_frame.pack_forget()
+                if self.calendar_frame.winfo_manager():
+                    self.calendar_frame.pack_forget()
+                if getattr(self, "datetime_label", None) is not None and self.datetime_label.winfo_manager():
+                    self.datetime_label.pack_forget()
+                if not self.summary_panel.winfo_manager():
+                    self.summary_panel.pack(fill="both", expand=True)
+                self.summary_panel.configure(corner_radius=22 if size_class == "medium" else 20)
+                self._layout_summary_panel(size_class, margin)
+                return
+
+            button_size = 24 if size_class == "large" else 28
             self.prev_btn.configure(width=button_size, height=button_size)
             self.next_btn.configure(width=button_size, height=button_size)
-            side_pad = 2 if very_compact else 4 if compact else self.SPACING_TIGHT
+            side_pad = 4 if size_class == "large" else self.SPACING_TIGHT
             self.prev_btn.pack_configure(padx=(0, side_pad))
             self.next_btn.pack_configure(padx=(side_pad, 0))
             self.today_btn.pack_configure(padx=(side_pad, 0))
             self.today_btn.configure(
-                text="T" if very_compact else "Tdy" if compact else "Today",
-                width=32 if very_compact else 44 if compact else 60,
+                text="Tdy" if size_class == "large" else "Today",
+                width=44 if size_class == "large" else 60,
                 height=button_size,
-                font=ctk.CTkFont(size=9 if very_compact else 10 if compact else self.get_responsive_font_size("body"), weight="bold"),
+                font=ctk.CTkFont(size=10 if size_class == "large" else self.get_responsive_font_size("body"), weight="bold"),
             )
-            self.month_label.configure(wraplength=max(70, self.winfo_width() - (126 if very_compact else 160)))
+            self.month_label.configure(wraplength=max(140, self.winfo_width() - 172))
         except Exception:
             pass
-        apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(self.SPACING_TIGHT, 0))
+        if size_class == "extra_large":
+            apply_calendar_footer_visibility(self, getattr(self, "datetime_label", None), pady=(self.SPACING_TIGHT, 0))
+        elif getattr(self, "datetime_label", None) is not None:
+            try:
+                self.datetime_label.pack_forget()
+            except Exception:
+                pass
         apply_calendar_grid_layout(self, self.calendar_frame, self.day_labels, self.day_buttons)
+
+    def _layout_summary_panel(self, size_class: str, margin: int) -> None:
+        for label in (
+            self.summary_weekday_label,
+            self.summary_day_label,
+            self.summary_month_label,
+            self.summary_event_label,
+        ):
+            try:
+                label.grid_forget()
+            except Exception:
+                pass
+
+        if size_class == "medium":
+            self.summary_panel.grid_columnconfigure(0, weight=0, minsize=120)
+            self.summary_panel.grid_columnconfigure(1, weight=1)
+            self.summary_day_label.grid(row=0, column=0, rowspan=2, sticky="n", padx=(margin, 10), pady=(margin, 0))
+            self.summary_weekday_label.grid(row=0, column=1, sticky="sw", padx=(0, margin), pady=(margin, 0))
+            self.summary_month_label.grid(row=1, column=1, sticky="nw", padx=(0, margin), pady=(0, 4))
+            self.summary_event_label.grid(row=2, column=0, columnspan=2, sticky="ew", padx=margin, pady=(4, margin))
+            self.summary_day_label.configure(font=ctk.CTkFont(size=44, weight="bold"))
+            self.summary_event_label.configure(wraplength=max(180, self.winfo_width() - (margin * 2)))
+        else:
+            self.summary_panel.grid_columnconfigure(0, weight=1)
+            self.summary_weekday_label.grid(row=0, column=0, sticky="ew", padx=margin, pady=(margin, 0))
+            self.summary_day_label.grid(row=1, column=0, sticky="ew", padx=margin, pady=(0, 0))
+            self.summary_month_label.grid(row=2, column=0, sticky="ew", padx=margin, pady=(0, 2))
+            self.summary_event_label.grid(row=3, column=0, sticky="ew", padx=margin, pady=(2, margin))
+            self.summary_day_label.configure(font=ctk.CTkFont(size=42, weight="bold"))
+            self.summary_event_label.configure(wraplength=max(120, self.winfo_width() - (margin * 2)))
+
+    def _update_summary_labels(self) -> None:
+        from datetime import datetime
+
+        now = datetime.now()
+        try:
+            self.summary_weekday_label.configure(text=now.strftime("%A"))
+            self.summary_day_label.configure(text=str(now.day))
+            self.summary_month_label.configure(text=now.strftime("%B %Y"))
+            self.summary_event_label.configure(text="No upcoming events")
+        except Exception:
+            pass
 
     def refresh_theme(self) -> None:
         if hasattr(self, 'month_label'):
@@ -672,7 +781,21 @@ class LiquidCalendarWidget(LiquidGlassWidget):
                 fg_color=self.theme["panel"],
                 border_color=self.theme.get("border", "transparent")
             )
-        
+        if hasattr(self, 'summary_panel'):
+            self.summary_panel.configure(
+                fg_color=self.theme["panel"],
+                border_color=self.theme.get("border", "transparent")
+            )
+        for label_name, color_key in (
+            ("summary_weekday_label", "muted"),
+            ("summary_day_label", "text"),
+            ("summary_month_label", "text"),
+            ("summary_event_label", "muted"),
+        ):
+            label = getattr(self, label_name, None)
+            if label is not None:
+                label.configure(text_color=self.theme.get(color_key, self.theme["text"]))
+         
         # Update day buttons with current theme
         self.update_calendar()
 
@@ -682,9 +805,15 @@ class LiquidCalendarWidget(LiquidGlassWidget):
         
         # Update month/year label
         month_name = calendar.month_name[self.display_month]
-        self.month_label.configure(text=f"{month_name[:3]} {self.display_year}")  # Short month name like macOS
+        size_class = calendar_size_class(self)
+        month_text = f"{month_name[:3]} {self.display_year}" if size_class == "large" else f"{month_name} {self.display_year}"
+        self.month_label.configure(text=month_text)
+        self._update_summary_labels()
         self._layout_calendar()
-        
+        if not calendar_uses_month_grid(self):
+            self.update_time()
+            return
+         
         # Get calendar data
         cal = calendar.monthcalendar(self.display_year, self.display_month)
         
@@ -766,6 +895,7 @@ class LiquidCalendarWidget(LiquidGlassWidget):
         now = datetime.now()
         time_str = now.strftime("%A, %B %d, %Y - %I:%M %p")
         self.datetime_label.configure(text=time_str)
+        self._update_summary_labels()
         
         # Check if we need to refresh calendar (new day)
         if now.day != self.current_date.day:

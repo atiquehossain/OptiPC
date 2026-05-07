@@ -45,7 +45,7 @@ def test_widget_sizes():
 
         expected_sizes = {
             "small": {"width": 170, "height": 170},
-            "medium": {"width": 368, "height": 170},
+            "medium": {"width": 364, "height": 170},
             "large": {"width": 364, "height": 376},
             "extra_large": {"width": 745, "height": 376},
             "default": {"width": DEFAULT_WIDGET_WIDTH, "height": DEFAULT_WIDGET_HEIGHT},
@@ -302,6 +302,50 @@ def test_app_overlap_placement_keeps_right_column():
         return False
 
 
+def test_calendar_size_classes():
+    """Test calendar content modes follow Mac-style widget size classes."""
+    try:
+        from widgets.calendar_responsive import calendar_size_class, calendar_uses_month_grid, widget_content_margin
+
+        class FakeCalendar:
+            def __init__(self, width, height):
+                self.width = width
+                self.height = height
+
+            def geometry(self):
+                return f"{self.width}x{self.height}+0+0"
+
+            def winfo_width(self):
+                return self.width
+
+            def winfo_height(self):
+                return self.height
+
+        cases = [
+            (170, 170, "small", False, 10),
+            (364, 170, "medium", False, 12),
+            (364, 376, "large", True, 16),
+            (745, 376, "extra_large", True, 16),
+        ]
+        for width, height, expected_class, expected_grid, expected_margin in cases:
+            widget = FakeCalendar(width, height)
+            if calendar_size_class(widget) != expected_class:
+                print(f"FAIL: Calendar {width}x{height} was classified as {calendar_size_class(widget)}")
+                return False
+            if calendar_uses_month_grid(widget) != expected_grid:
+                print(f"FAIL: Calendar {width}x{height} grid mode mismatch")
+                return False
+            if widget_content_margin(widget) != expected_margin:
+                print(f"FAIL: Calendar {width}x{height} margin mismatch")
+                return False
+
+        print("OK: Calendar size classes switch content modes correctly")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Calendar size class test error: {exc}")
+        return False
+
+
 def main():
     print("Testing OptiPC Widget Responsive Design Implementation")
     print("=" * 60)
@@ -316,6 +360,7 @@ def main():
         ("Widget Overlap Placement Tests", test_widget_overlap_placement),
         ("Scaled Screen Edge Placement Tests", test_scaled_screen_edge_uses_logical_size),
         ("App Right Column Placement Tests", test_app_overlap_placement_keeps_right_column),
+        ("Calendar Size Class Tests", test_calendar_size_classes),
     ]
 
     passed = 0

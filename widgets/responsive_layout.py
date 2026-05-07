@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import re
+
 import customtkinter as ctk
 
 from config.constants import FONT_SIZES, RESPONSIVE_FONT_SIZES
+
+GEOMETRY_PATTERN = re.compile(r"^(\d+)x(\d+)([-+]\d+)([-+]\d+)$")
 
 
 MIN_FONT_SIZES = {
@@ -18,15 +22,24 @@ MIN_FONT_SIZES = {
 MAX_FONT_SIZES = {
     "tiny": 12,
     "small": 14,
-    "body": 15,
+    "body": 17,
     "label": 16,
-    "title": 18,
-    "metric": 30,
-    "hero": 32,
+    "title": 20,
+    "metric": 34,
+    "hero": 38,
 }
 
 
 def _current_dimension(window, attr_name: str, fallback: int) -> int:
+    try:
+        match = GEOMETRY_PATTERN.match(str(window.geometry()))
+        if match:
+            group_index = 1 if attr_name == "winfo_width" else 2
+            value = int(match.group(group_index))
+            if value > 1:
+                return value
+    except Exception:
+        pass
     try:
         value = int(getattr(window, attr_name)())
     except Exception:
