@@ -755,9 +755,12 @@ class LiquidGlassWidget(HeaderlessEditModeMixin, WidgetSpecMixin, ctk.CTkTopleve
                 new_h = proposed_h
                 new_y = self._resize_start_win_y + dy
                 
-        elif direction == "ne":  # Northeast - resize right and bottom
+        elif direction == "ne":  # Northeast - resize right and top
             new_w = max(self.MIN_WIDTH, self._resize_start_w + width_delta)
-            new_h = max(self.MIN_HEIGHT, self._resize_start_h + height_delta)
+            proposed_h = self._resize_start_h - height_delta
+            if proposed_h >= self.MIN_HEIGHT:
+                new_h = proposed_h
+                new_y = self._resize_start_win_y + dy
             
         elif direction == "nw":  # Northwest - resize left and top
             proposed_w = self._resize_start_w - width_delta

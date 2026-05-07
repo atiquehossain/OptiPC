@@ -213,6 +213,55 @@ def test_resize_release_saves_geometry():
     return True
 
 
+def test_northeast_resize_moves_top_edge():
+    """Top-right resize should change the top edge, not resize downward."""
+    from widgets.base_mini_widget import BaseMiniWidget
+    from widgets.liquid_glass_widget import LiquidGlassWidget
+    from widgets.modern_widget_base import ModernMiniWidget
+
+    class FakeWindow:
+        MIN_WIDTH = 160
+        MIN_HEIGHT = 160
+        MAX_WIDTH = 1000
+        MAX_HEIGHT = 1000
+
+        def __init__(self):
+            self._is_resizing = True
+            self._resize_dir = "ne"
+            self._resize_start_x = 300
+            self._resize_start_y = 300
+            self._resize_start_w = 200
+            self._resize_start_h = 200
+            self._resize_start_win_x = 100
+            self._resize_start_win_y = 100
+            self.applied_geometry = ""
+
+        def _get_window_scaling(self):
+            return 1.0
+
+        def geometry(self, value=None):
+            if value is not None:
+                self.applied_geometry = value
+            return self.applied_geometry or "200x200+100+100"
+
+    class FakeEvent:
+        x_root = 350
+        y_root = 260
+
+    for cls in (BaseMiniWidget, ModernMiniWidget, LiquidGlassWidget):
+        window = FakeWindow()
+        result = cls.on_mouse_drag(window, FakeEvent())
+        if result != "break":
+            print(f"FAIL: {cls.__name__} did not stop event propagation")
+            return False
+        if window.applied_geometry != "250x240+100+60":
+            print(f"FAIL: {cls.__name__} applied {window.applied_geometry} for northeast resize")
+            return False
+
+    print("OK: Northeast resize moves the top edge")
+    return True
+
+
 if __name__ == "__main__":
     success = (
         test_resize_conflict_fix()
@@ -220,5 +269,6 @@ if __name__ == "__main__":
         and test_scaled_pointer_coordinates_use_geometry_units()
         and test_drag_target_binding_is_idempotent()
         and test_resize_release_saves_geometry()
+        and test_northeast_resize_moves_top_edge()
     )
     sys.exit(0 if success else 1)
