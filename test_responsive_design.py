@@ -738,11 +738,53 @@ def test_main_geometry_skips_hidden_smoke_window():
         if "width < 800 or height < 500" not in save_source:
             print("FAIL: Main geometry save does not reject tiny smoke-test geometry")
             return False
+        if "current_widget_geometry(self)" not in save_source:
+            print("FAIL: Main geometry save does not use logical geometry values")
+            return False
 
-        print("OK: Main geometry save ignores hidden smoke-test windows")
+        print("OK: Main geometry save ignores hidden smoke-test windows and scaled sizes")
         return True
     except Exception as exc:
         print(f"FAIL: Main geometry save guard test error: {exc}")
+        return False
+
+
+def test_main_geometry_clamps_to_visible_screen():
+    """Test saved main-window geometry is resized and moved inside the current display."""
+    try:
+        import app as app_module
+
+        class FakeWindow:
+            def _get_window_scaling(self):
+                return 1.5
+
+        original_bounds = app_module.get_virtual_screen_bounds
+        app_module.get_virtual_screen_bounds = lambda _window=None: (0, 0, 1920, 1080)
+        try:
+            width, height, x, y = app_module._constrain_main_window_geometry(
+                FakeWindow(),
+                1320,
+                900,
+                2500,
+                -500,
+            )
+        finally:
+            app_module.get_virtual_screen_bounds = original_bounds
+
+        if width != 1248:
+            print(f"FAIL: Main window width was not scaled to screen: {width}")
+            return False
+        if height != 688:
+            print(f"FAIL: Main window height was not scaled to screen: {height}")
+            return False
+        if x != 24 or y != 24:
+            print(f"FAIL: Main window position was not clamped on screen: {x},{y}")
+            return False
+
+        print("OK: Main window geometry is clamped to the visible screen")
+        return True
+    except Exception as exc:
+        print(f"FAIL: Main geometry clamp test error: {exc}")
         return False
 
 
@@ -824,6 +866,7 @@ def main():
         ("Widget Material Mode Tests", test_widget_material_modes),
         ("App Theme Widget Refresh Tests", test_app_theme_change_refreshes_widgets),
         ("Main Geometry Smoke Guard Tests", test_main_geometry_skips_hidden_smoke_window),
+        ("Main Geometry Screen Clamp Tests", test_main_geometry_clamps_to_visible_screen),
         ("Smoke Config Restore Tests", test_smoke_test_restores_user_config),
         ("Resource Saver Guard Tests", test_resource_saver_guards),
     ]

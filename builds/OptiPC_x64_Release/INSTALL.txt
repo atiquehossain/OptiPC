@@ -15,8 +15,8 @@ System Requirements:
 
 File Information:
 - Executable: OptiPC_x64.exe
-- Size: 32.6 MB
-- Built: 2026-05-07 23:40:31
+- Size: 33.0 MB
+- Built: 2026-05-20 11:36:08
 
 Troubleshooting:
 - If antivirus blocks the executable, add it to exceptions

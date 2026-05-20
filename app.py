@@ -69,6 +69,82 @@ from widgets.window_interactions import (
     get_virtual_screen_bounds,
 )
 
+MAIN_WINDOW_DEFAULT_WIDTH = 1320
+MAIN_WINDOW_DEFAULT_HEIGHT = 820
+MAIN_WINDOW_MIN_WIDTH = 1150
+MAIN_WINDOW_MIN_HEIGHT = 720
+MAIN_WINDOW_SCREEN_MARGIN = 24
+
+
+def _main_window_scaling(window) -> float:
+    try:
+        scaling = float(window._get_window_scaling())
+        if scaling > 0:
+            return scaling
+    except Exception:
+        pass
+    return 1.0
+
+
+def _main_window_min_size(window) -> tuple[int, int]:
+    bounds = get_virtual_screen_bounds(window)
+    if bounds is None:
+        return MAIN_WINDOW_MIN_WIDTH, MAIN_WINDOW_MIN_HEIGHT
+
+    _screen_x, _screen_y, screen_width, screen_height = bounds
+    scale = _main_window_scaling(window)
+    available_width = max(1, screen_width - (MAIN_WINDOW_SCREEN_MARGIN * 2))
+    available_height = max(1, screen_height - (MAIN_WINDOW_SCREEN_MARGIN * 2))
+    max_logical_width = max(1, int(available_width / scale))
+    max_logical_height = max(1, int(available_height / scale))
+    return (
+        min(MAIN_WINDOW_MIN_WIDTH, max_logical_width),
+        min(MAIN_WINDOW_MIN_HEIGHT, max_logical_height),
+    )
+
+
+def _constrain_main_window_geometry(
+    window,
+    width: int,
+    height: int,
+    x: int,
+    y: int,
+) -> tuple[int, int, int, int]:
+    min_width, min_height = _main_window_min_size(window)
+    width = max(min_width, int(width))
+    height = max(min_height, int(height))
+
+    bounds = get_virtual_screen_bounds(window)
+    if bounds is None:
+        return width, height, int(x), int(y)
+
+    screen_x, screen_y, screen_width, screen_height = bounds
+    scale = _main_window_scaling(window)
+    available_width = max(1, screen_width - (MAIN_WINDOW_SCREEN_MARGIN * 2))
+    available_height = max(1, screen_height - (MAIN_WINDOW_SCREEN_MARGIN * 2))
+    max_logical_width = max(min_width, int(available_width / scale))
+    max_logical_height = max(min_height, int(available_height / scale))
+    width = min(width, max_logical_width)
+    height = min(height, max_logical_height)
+
+    effective_width, effective_height = effective_window_size(window, width, height)
+    min_x = screen_x + MAIN_WINDOW_SCREEN_MARGIN
+    min_y = screen_y + MAIN_WINDOW_SCREEN_MARGIN
+    max_x = screen_x + screen_width - effective_width - MAIN_WINDOW_SCREEN_MARGIN
+    max_y = screen_y + screen_height - effective_height - MAIN_WINDOW_SCREEN_MARGIN
+
+    if max_x < min_x:
+        x = screen_x
+    else:
+        x = max(min_x, min(int(x), max_x))
+
+    if max_y < min_y:
+        y = screen_y
+    else:
+        y = max(min_y, min(int(y), max_y))
+
+    return width, height, x, y
+
 
 class OptiPCApp(ctk.CTk):
     def __init__(self) -> None:
@@ -176,12 +252,24 @@ class OptiPCApp(ctk.CTk):
 
     def _apply_saved_main_geometry(self) -> None:
         state = self.widget_state_service.get_main_window_state()
-        width = int(state.get("width", 1320))
-        height = int(state.get("height", 820))
+        width = int(state.get("width", MAIN_WINDOW_DEFAULT_WIDTH))
+        height = int(state.get("height", MAIN_WINDOW_DEFAULT_HEIGHT))
         x = int(state.get("x", 80))
         y = int(state.get("y", 60))
+        min_width, min_height = _main_window_min_size(self)
+        self.minsize(min_width, min_height)
+        width, height, x, y = _constrain_main_window_geometry(self, width, height, x, y)
         self.geometry(f"{width}x{height}+{x}+{y}")
-        self.minsize(1150, 720)
+        self.after(0, self._ensure_main_window_visible)
+
+    def _ensure_main_window_visible(self) -> None:
+        try:
+            x, y, width, height = current_widget_geometry(self)
+            new_width, new_height, new_x, new_y = _constrain_main_window_geometry(self, width, height, x, y)
+            if (new_width, new_height, new_x, new_y) != (width, height, x, y):
+                self.geometry(f"{new_width}x{new_height}+{new_x}+{new_y}")
+        except Exception:
+            pass
 
     def _on_main_configure(self, event) -> None:
         if event.widget is not self:
@@ -205,13 +293,19 @@ class OptiPCApp(ctk.CTk):
                 return
         except Exception:
             pass
-        width = self.winfo_width()
-        height = self.winfo_height()
+        x, y, width, height = current_widget_geometry(self)
         if width < 800 or height < 500:
             return
+        width, height, x, y = _constrain_main_window_geometry(
+            self,
+            width,
+            height,
+            x,
+            y,
+        )
         self.widget_state_service.set_main_window_geometry(
-            x=self.winfo_x(),
-            y=self.winfo_y(),
+            x=x,
+            y=y,
             width=width,
             height=height,
         )
